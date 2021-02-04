@@ -1,0 +1,43 @@
+#! /usr/bin/python3
+
+# setreg -- python cli program to set a reg on the ardunio
+
+import sys
+from smbus import SMBus
+
+addr = 0x8 # bus address of ardunio
+bus = SMBus(1) # indicates /dev/ic2-1
+
+def writereg(regadr, dat):
+	bus.write_byte_data(addr, regadr, dat)
+
+def readreg(regadr):
+	return bus.read_byte_data(addr, regadr)
+
+if len(sys.argv) < 3:
+	print("setreg -- set a register in the ardunio using the i2c bus.\n")
+	print("Usage: setreg regnum data\nwhere regnum is 6-9, and data is a number.\n")
+	sys.exit()
+
+try:
+	regnum = int(sys.argv[1])
+	dat = int(sys.argv[2])
+except ValueError:
+	print("Arguments must be numbers.\n")
+	sys.exit()
+if regnum < 0 or regnum > 1000:
+	print("Register number out of range.\n")
+	sys.exit()
+if dat < 0 or dat > 255:
+	print("Data must be between 0 and 255.\n")
+	sys.exit()
+
+writereg(regnum, dat)
+dd = readreg(regnum)
+if dd == dat:
+	print("Success: readback successful. %d is in reg %d.\n" % (dat, regnum))
+	sys.exit()
+else:
+	print("Failure: readback unsuccessful. %d found instead of %d.\n" % (dd, dat))
+	sys.exit()
+

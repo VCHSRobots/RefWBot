@@ -1,0 +1,33 @@
+#! /usr/bin/python3
+
+# getreg -- python cli program to get data from a reg on the ardunio
+
+import sys
+from smbus import SMBus
+
+addr = 0x8 # bus address of ardunio
+bus = SMBus(1) # indicates /dev/ic2-1
+
+def writereg(regadr, dat):
+	bus.write_byte_data(addr, regadr, dat)
+
+def readreg(regadr):
+	return bus.read_byte_data(addr, regadr)
+
+if len(sys.argv) < 2:
+	print("getreg -- gets a register in the ardunio using the i2c bus.\n")
+	print("Usage: getreg regnum\nwhere regnum is the number of the registor to access.\n")
+	sys.exit()
+
+try:
+	regnum = int(sys.argv[1])
+except ValueError:
+	print("Argument must be a number.\n")
+	sys.exit()
+if regnum < 0 or regnum > 1000:
+	print("Register number out of range.\n")
+	sys.exit()
+
+dd = readreg(regnum)
+print("Reg[%d] = %d.\n" % (regnum, dd))
+
