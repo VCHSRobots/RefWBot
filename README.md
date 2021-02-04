@@ -15,7 +15,7 @@ that matter.
 
 Here is a pic of our starting block diagram.  (hopefully will improve as we move forward).
 
-![cannot find it](SystemWhiteBoard.jpg)
+![cannot find it](control_sys_white_board.jpg)
 
 
 
