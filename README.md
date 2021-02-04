@@ -13,4 +13,10 @@ This code is freely shared to all team and subteams -- it is considered to be
 a "reference" design that could be used to control a water bot, or any bot for
 that matter.
 
+Here is a pic of our starting block diagram.  (hopefully will improve as we move forward).
+
+![cannot find it](SystemWhiteBoard.jpg)
+
+
+
 
