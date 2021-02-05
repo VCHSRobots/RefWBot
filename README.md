@@ -17,6 +17,8 @@ Here is a pic of our starting block diagram.  (hopefully will improve as we move
 
 ![cannot find it](control_sys_white_board.jpg)
 
+...
+
 
 
 
