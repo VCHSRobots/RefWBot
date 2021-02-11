@@ -3,6 +3,7 @@
 
 import paho.mqtt.client as mqtt
 import sys
+import lib.xpwm as xpwm
 
 broker_url = "10.0.5.1"
 broker_port = 1883
@@ -12,6 +13,7 @@ joy_xyz = [0.0, 0.0, 0.0]
 joy_ruv = [0.0, 0.0, 0.0]
 heartbeat = 0
 heartbeat_age = 0
+xpwm.board_init()
 
 def on_connect(client, userdata, flags, rc):
     print("Connected to broker. Code: " + str(rc))
@@ -22,6 +24,11 @@ def on_disconnect(client, userdata, flags, rc):
 
 def on_message(client, userdata, msg):
     print("Msg Received [%s] = %s" % (msg.topic, msg.payload.decode()))
+    if msg.topic == "WBot/Joystick/xyz":
+        rot = float(msg.payload.decode().split()[0])
+        rot = (rot + 1.0) / 2.0
+        xpwm.set_servo(11, rot)
+
 
 mqtt_client = mqtt.Client()
 mqtt_client.connect(broker_url, broker_port)

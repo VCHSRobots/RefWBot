@@ -40,11 +40,11 @@ def run_joystick_com():
             mqtt_client.publish(topic="WBot/Joystick/Buttons", payload=s.encode("ascii"), qos=1, retain=True)
         if last_xyz != xyz:
             last_xyz = xyz
-            s = "%6.1f %6.1f %6.1f" % xyz
+            s = "%7.4f %7.4f %7.4f" % xyz
             mqtt_client.publish(topic="WBot/Joystick/xyz", payload=s.encode("ascii"), qos=1, retain=True)
         if last_ruv != ruv:
             last_ruv = ruv
-            s = "%6.1f %6.1f %6.1f" % ruv
+            s = "%7.4f %7.4f %7.4f" % ruv
             mqtt_client.publish(topic="WBot/Joystick/ruv", payload=s.encode("ascii"), qos=1, retain=True)
         bg_count += 1
         time.sleep(0.015)
