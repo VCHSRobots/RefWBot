@@ -4,6 +4,16 @@ import tkinter.messagebox as tkbox
 import lib.joystick as joystick
 import threading
 import time
+import paho.mqtt.client as mqtt
+
+def on_connect(client, userdata, flags, rc):
+    print("Connected to MQTT Broker. Code: " + rc)
+
+broker_url = "10.0.5.1"
+broker_port = 1883
+mqtt_client = mqtt.Client()
+mqtt_client.connect(broker_url, broker_port)
+mqtt_client.loop_start()
 
 if joystick.openGamepad(): joy_status = "Joystick Detected."
 
@@ -11,13 +21,31 @@ if joystick.openGamepad(): joy_status = "Joystick Detected."
 # Background task...
 bg_count = 0
 bg_quit = False
+last_btns = [ ]
+last_xyz = [ ]
+last_ruv = [ ]
 def run_joystick_com():
-    global bg_count
+    global bg_count, last_btns, last_xyz, last_ruv
     while True:
         btns = joystick.getGamepadButtons()
         xyz = joystick.getGamepadAxis()
         ruv = joystick.getGamepadRot()
         # send out joystick values to robot here...
+        if last_btns != btns:
+            last_btns = btns
+            s = ""
+            for i in btns:
+                if i: s += "T " 
+                else: s += "F "
+            mqtt_client.publish(topic="WBot/Joystick/Buttons", payload=s.encode("ascii"), qos=1, retain=True)
+        if last_xyz != xyz:
+            last_xyz = xyz
+            s = "%6.1f %6.1f %6.1f" % xyz
+            mqtt_client.publish(topic="WBot/Joystick/xyz", payload=s.encode("ascii"), qos=1, retain=True)
+        if last_ruv != ruv:
+            last_ruv = ruv
+            s = "%6.1f %6.1f %6.1f" % ruv
+            mqtt_client.publish(topic="WBot/Joystick/ruv", payload=s.encode("ascii"), qos=1, retain=True)
         bg_count += 1
         time.sleep(0.015)
         if bg_quit: return
@@ -140,4 +168,5 @@ win1.mainloop()
 
 #shutdown the background.
 bg_quit = True
+mqtt_client.loop_stop()
 
