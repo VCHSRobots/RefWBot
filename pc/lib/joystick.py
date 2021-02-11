@@ -95,11 +95,14 @@ def openGamepad():
             return True
     return False
 
+def haveGamepad():
+    ''' Returns True if a valid gamepad is opened. False otherwise. '''
+    return gamepad_id >= 0
+
 def getGamepadButtons():
     ''' Return a list of at list 12 booleans describing the joystick's button status '''
     if gamepad_id < 0: return [False for i in range(12)]
     ret, info = joyGetPosEx(gamepad_id)
-    print(ret)
     if not ret: return [False for i in range(12)]
     btns = [(1<<i) & info.dwButtons != 0 for i in range(gamepad_caps.wNumButtons)]
     if len(btns) < 12:
