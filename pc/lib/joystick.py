@@ -115,14 +115,17 @@ def getGamepadAxis():
     if gamepad_id < 0: return [0, 0, 0]
     ret, info = joyGetPosEx(gamepad_id)
     if not ret: return [0.0, 0.0, 0.0]
-    return ((info.dwXpos - 32678)/32768.0, (info.dwYpos - 32678)/32768.0, (info.dwZpos - 32678)/32768.0)
+    x,y,z = (info.dwXpos - 32678)/32768.0, (info.dwYpos - 32678)/32768.0, (info.dwZpos - 32678)/32768.0
+    x,y,z = -x, -y, -z  
+    return (x, y, z)
 
 def getGamepadRot():
     ''' Return a list of three floats (-1 to +1) describing the joystick's rotational axis '''
     if gamepad_id < 0: return [0, 0, 0]
     ret, info = joyGetPosEx(gamepad_id)
     if not ret: return [0.0, 0.0, 0.0]
-    return ((info.dwRpos - 32678)/32768.0, (info.dwUpos - 32678)/32768.0, (info.dwVpos - 32678)/32768.0)
+    r, u, v = (info.dwRpos - 32678)/32768.0, (info.dwUpos - 32678)/32768.0, (info.dwVpos - 32678)/32768.0
+    return (r, u, v)
     
 JOYERR_NOERROR = 0
 JOY_RETURNX = 0x00000001

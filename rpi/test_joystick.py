@@ -28,6 +28,11 @@ def on_message(client, userdata, msg):
         rot = float(msg.payload.decode().split()[0])
         rot = (rot + 1.0) / 2.0
         xpwm.set_servo(11, rot)
+        speed = float(msg.payload.decode().split()[1])  # speed between -1 and 1
+        if speed <= 0:
+          xpwm.set_servo(15, 0.0)
+        else:
+          xpwm.set_serov(15, speed)
 
 
 mqtt_client = mqtt.Client()
@@ -39,4 +44,5 @@ mqtt_client.subscribe("WBot/Joystick/Buttons", qos=1)
 mqtt_client.subscribe("WBot/Joystick/xyz", qos=1)
 mqtt_client.subscribe("WBot/Joystick/ruv", qos=1)
 #mqtt_client.subscribe("WBot/Heartbeat", qos=1)
+mqtt_client.set_servo(15, 800)
 mqtt_client.loop_forever()
