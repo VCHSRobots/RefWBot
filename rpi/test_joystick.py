@@ -22,8 +22,12 @@ def on_disconnect(client, userdata, flags, rc):
     print("Disconnected from broker. Code: " + rc)
     sys.exit()
 
+ncnt = 19
 def on_message(client, userdata, msg):
-    print("Msg Received [%s] = %s" % (msg.topic, msg.payload.decode()))
+    ncnt += 1
+    if ncnt == 20:
+      print("Msgs Received (%d) [%s] = %s" % (ncnt, msg.topic, msg.payload.decode()))
+      ncnt = 0
     if msg.topic == "WBot/Joystick/xyz":
         rot = float(msg.payload.decode().split()[0])
         rot = (rot + 1.0) / 2.0
@@ -32,7 +36,7 @@ def on_message(client, userdata, msg):
         if speed <= 0:
           xpwm.set_servo(15, 0.0)
         else:
-          xpwm.set_serov(15, speed)
+          xpwm.set_servo(15, speed)
 
 
 mqtt_client = mqtt.Client()
@@ -44,5 +48,5 @@ mqtt_client.subscribe("WBot/Joystick/Buttons", qos=1)
 mqtt_client.subscribe("WBot/Joystick/xyz", qos=1)
 mqtt_client.subscribe("WBot/Joystick/ruv", qos=1)
 #mqtt_client.subscribe("WBot/Heartbeat", qos=1)
-mqtt_client.set_servo(15, 800)
+xpwm.set_servo(15, 0.0)
 mqtt_client.loop_forever()
