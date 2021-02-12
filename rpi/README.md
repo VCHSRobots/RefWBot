@@ -35,4 +35,4 @@ https://www.raspberrypi.org/documentation/remote-access/vnc/
 3. The reference RPi's ssid is "RefWBot".  The WiFi password for the reference RPi is the normal one used by EPIC robotz. 
 4. When enabling I2C, you probably don't need to change the baudrate -- keep it at it's default of 100,000.
 5. When installing MQTT, its probably best to use the RPi as the broker.  That is because it's IP address will be fixed to 10.0.5.1 if you follow the recommendation in note 1.
-
+6. The PCA9685 Module requires an address.  For the reference design it is set to 0x4C. You must set that address on the module itself by using a soldering iron to "jump" the correct Address bits (A5, A4, A3, A2, A1).  Look carefully at the example to see how this is down.
