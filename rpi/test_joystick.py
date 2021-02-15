@@ -24,7 +24,7 @@ def on_disconnect(client, userdata, flags, rc):
 
 ncnt = 19
 def on_message(client, userdata, msg):
-  global ncnt
+    global ncnt
     ncnt += 1
     if ncnt == 20:
       print("Msgs Received (%d) [%s] = %s" % (ncnt, msg.topic, msg.payload.decode()))
