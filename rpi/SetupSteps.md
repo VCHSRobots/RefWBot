@@ -7,10 +7,10 @@ Follow these steps for a complete installation of the RPi software from scratch.
 
  On a PC download the imager program from here:  https://www.raspberrypi.org/software .
 
-Then, insert an SD card in the PC and run the imager program.  It will write the OS image on the SD Card.  If your going to do this more than once, you might want to download the actual image first, from here:  https://www.raspberrypi.org/software/operating-systems/
+Then, insert an SD card in the PC and run the imager program.  It will write the OS image on the SD Card.  If you are going to do this more than once, you might want to download the actual image first, from here:  https://www.raspberrypi.org/software/operating-systems/
 and then use the imager in custom mode.
 
-### 2. Do Inital Powerup Configuration
+### 2. Do Initial Powerup Configuration
 Start up the Pi with a connected monitor, keyboard, and mouse.
 Run through the automatic configuration questions, setting a password, setting up Wifi, and so forth. I suggest that you choose "epic" as the password when it asks.  Reboot.
 
@@ -22,7 +22,7 @@ This can be done from the GUI, using: Preferences->Raspberry Pi Configuration.  
     System -> Network at Boot = Do not wait
     System -> Splash Screen = Disable
     Interfaces -> Enable everything except: Serial Console and Remote GPIO
-    Locaization -> Do what you think best, but normally choose the correct timezone, country, and keyboard.
+    Localization  -> Do what you think best, but normally choose the correct timezone, country, and keyboard.
     Other Tabs -> No changes from default.
 
 Then reboot again.
@@ -30,11 +30,11 @@ Then reboot again.
 ### 4. Work Remotely
 In case we want to work remotely, so that you no longer need a monitor/keyboard/mouse plugged into your raspberry pi, do this step.
 
-Open a command window on the RPi and type: "ifconfig".  This will give a report of your network settings.  Under WLAN0 you should see an IP addres simpliar to this: 192.168.1.35.  Remember this IP address, for the next steps. (Note: that if the power is cycled on the pi, this address might change).
+Open a command window on the RPi and type: "ifconfig".  This will give a report of your network settings.  Under WLAN0 you should see an IP address similar to this: 192.168.1.35.  Remember this IP address, for the next steps. (Note: that if the power is cycled on the pi, this address might change).
 
 Use your PC, and start a command terminal.  
 
-Issue the command: ssh pi@192.168.1.35   (substitude the IP addresss that you found in the above step) and answer yes if it warns you about authenticity.  Then give the password ("epic") when it asks 
+Issue the command: ssh pi@192.168.1.35   (substitute  the IP address that you found in the above step) and answer yes if it warns you about authenticity.  Then give the password ("epic") when it asks 
 and you should have a command line terminal to the Rpi.  At this point you can work on your PC and issue commands.
 
 Or you can continue to work from the monitor/keyboard/mouse connected directly to the pi.  
@@ -42,7 +42,7 @@ Or you can continue to work from the monitor/keyboard/mouse connected directly t
 ### 5. Minor Changes in .bashrc
 
 The .bashrc file is normally executed on each startup -- and it configures your personal environment.  Make a minor change to add an
-alises for showing files in a folder.  For example:
+alias for showing files in a folder.  For example:
 
 	cd
 	nano .bashrc
@@ -51,7 +51,7 @@ alises for showing files in a folder.  For example:
 
 
 ### 6. Get Up-To-Date Software
-Make sure the software on you system is up-to-date.  Do this at the terminal by:
+Make sure the software on your system is up-to-date.  Do this at the terminal by:
 
 	sudo apt update
 	sudo apt upgrade
@@ -83,10 +83,10 @@ is in the right place, then issue the clone command, like so:
     cd
 	git clone git@github.com:VCHSRobots/RefWBot.git
 
-At this point, you should have a folder under your home directory, named "RefWBot" that contains the referece code.
+At this point, you should have a folder under your home directory, named "RefWBot" that contains the reference  code.
 
 ### 10. Install MQTT
-The MQTT protocol is used to communicate between the Driver Station on the PC and the RPi.  We use an impletation of MQTT called mosquetto. A detailed account on how to do this is found here:
+The MQTT protocol is used to communicate between the Driver Station on the PC and the RPi.  We use an implementation of MQTT called mosquetto. A detailed account on how to do this is found here:
 https://appcodelabs.com/introduction-to-iot-build-an-mqtt-server-using-raspberry-pi
 
 The commands are:
@@ -94,12 +94,12 @@ The commands are:
 	sudo apt install mosquitto mosquitto-clients
 	sudo systemctl enable mosquitto
 
-The web artical tells how to verify that mosquitto is working correctly.  You should try out those steps.  The artical
-also point you to info on how to set up mosquitto on a PC -- that might be helpful for debugging.  You are encouraged to follow the steps in the artical to learn more on how MQTT works.
+The web article  tells how to verify that mosquitto is working correctly.  You should try out those steps.  The article 
+also points you to info on how to set up mosquitto on a PC -- that might be helpful for debugging.  You are encouraged to follow the steps in the article  to learn more on how MQTT works.
 
 ### 11. Make the Raspberry Pi an "Access Point"
 
-Now for the most complicated step -- set up the raspberry pi as an "Access Point".  This will allow the Driver Station on the PC to reliable communicate with your robot when normal WiFi networks are not avaliable -- like at pool side.
+Now for the most complicated step -- set up the raspberry pi as an "Access Point".  This will allow the Driver Station on the PC to reliably communicate with your robot when normal WiFi networks are not available  -- like at the pool side.
 
 Although complicated, this step is easy if you follow the instructions here: https://www.raspberrypi.org/documentation/configuration/wireless/access-point-routed.md
 
@@ -157,9 +157,3 @@ Then you can view the log file for clues.  Also these following commands might b
 	systemclt status hostapd
 	iw dev wlan0 info
 	ifconfig
-
-
-
-1. Make sure you install the CH340 Driver on your PC from here: 
-	https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all
-The window's version is a long way down the page.

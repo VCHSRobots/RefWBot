@@ -31,9 +31,9 @@ https://www.raspberrypi.org/documentation/remote-access/vnc/
 
 ### Notes
 1. When configuring the Access Point software (a long and complicated step), you should use 10.0.5.1 for the IP address of your RPi.  This is hard coded into the reference software, and you won't need to change it as you customize the reference design.  Your network will be on the 10.0.5.x addresses. If you do it this way, your WiFi network will not conflict with other teams since they will be connecting to their own RPi's network.  Even though both networks are on the same 10.0.5.x addresses, they will be on a different WiFi channel and ssid.
-2. You, however must choose a unique name for your ssid on your RPi's WiFi.  This is done when you edit the /etc/hostapd/hostapd.conf file.  In addition, you must be careful to set up the IP addresses to the 10.0.5.x addresses, instead of the 192.168.4.x addresses described in the artical. (That is, just change 192.168.4 to 10.0.5 at each occurance.)
+2. You, however, must choose a unique name for your ssid on your RPi's WiFi.  This is done when you edit the /etc/hostapd/hostapd.conf file.  In addition, you must be careful to set up the IP addresses to the 10.0.5.x addresses, instead of the 192.168.4.x addresses described in the article. (That is, just change 192.168.4 to 10.0.5 at each occurance.)
 3. The reference RPi's ssid is "RefWBot".  The WiFi password for the reference RPi is the normal one used by EPIC robotz. 
-4. When enabling I2C, you probably don't need to change the baudrate -- keep it at it's default of 100,000.
+4. When enabling I2C, you probably don't need to change the baud rate -- keep it at it's default of 100,000.
 5. When installing MQTT, its probably best to use the RPi as the broker.  That is because it's IP address will be fixed to 10.0.5.1 if you follow the recommendation in note 1.
 6. The PCA9685 Module requires an address.  For the reference design it is set to 0x4C. You must set that address on the module itself by using a soldering iron to "jump" the correct Address bits (A5, A4, A3, A2, A1).  Look carefully at the example to see how this is down.
 

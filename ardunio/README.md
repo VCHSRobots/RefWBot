@@ -2,7 +2,7 @@
 __Epic Robotz, dlb, Feb 2021__
 
 
-### 1. Get the Window's Driver for the Nano
+### 1. Get the Windows Driver for the Nano
 
  Make sure you install the CH340 Driver on your PC.  One place to get it is from here: 
 	https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all
@@ -13,7 +13,7 @@ The link to the window's version is a long way down the page.
 
 The arduino IDE can be downloaded here: https://www.arduino.cc/en/software
 
-### 3. Configuer the IDE
+### 3. Configure the IDE
 First, plug in your Nano with a USB cord.  The Nano should light up, and the PC should make USB connecting sounds.  If the PC doesn't acknowledge some sort of connection it is probably because you are using a "charge only" USB cable. Get another cable and try again.
 
 Once the Nano is actually connected to the PC, do the following in the IDE:
@@ -31,7 +31,7 @@ In the IDE, do Tools->Get Board Info.  If all goes well, you should see a dialog
 Using the IDE, open "RobotRun" from the reference repository.  That is located at ...\RefWBot\arduino\RobotRun.  Then click the Upload arrow in the IDE.  
 
 ### 6. Verify All is Well
-If all goes well, you shouldn't see any errors, and the software on the RPi should be able to communicate with the Arduino.  For ecample
+If all goes well, you shouldn't see any errors, and the software on the RPi should be able to communicate with the Arduino.  For example 
 on the raspberry, execute the following commands:
 
     cd RefWBot/rpi
