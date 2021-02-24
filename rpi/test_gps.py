@@ -38,7 +38,6 @@ def run_gps():
             print("Valid = ", gps.valid)
             print("Date = ", gps.date)
             print("Timestamp = ", gps.timestamp)
-            print("T" = gps.)
             print("Fix Time = ", gps.fix_time)
             print("Fix Type = ", gps.fix_type)
             print("Latitude = ", gps.latitude)
