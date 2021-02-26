@@ -58,4 +58,3 @@ if dd == dat:
 else:
 	print("Failure: readback unsuccessful. %d found instead of %d.\n" % (dd, dat))
 	sys.exit()
-
