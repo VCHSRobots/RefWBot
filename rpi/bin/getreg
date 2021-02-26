@@ -17,7 +17,7 @@ def readreg(regadr):
 
 def fmtbinary(x):
 	s = ""
-	for i in range(8):
+	for _ in range(8):
 		if x & 0x80 != 0: s += "1"
 		else: s += "0"
 		x = x << 1

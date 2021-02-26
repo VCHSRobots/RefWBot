@@ -44,6 +44,7 @@ joyGetPosEx_func  = joyGetPosEx_proto(("joyGetPosEx", winmmdll), joyGetPosEx_par
 
 # joystickapi - joyGetNumDevs
 def joyGetNumDevs():
+    ''' Returns the number of suitable joysticks/gamepads found on the system. '''
     try:
         num = joyGetNumDevs_func()
     except:
