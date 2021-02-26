@@ -95,8 +95,11 @@ void setup() {
   Wire.begin(ardunio_ic2_addr);
   Wire.onReceive(receivePiCmd);
   Wire.onRequest(sendPiData);
-  Serial.begin(115200);
   timenext = millis() + 10;
+  Serial.begin(115200);
+  Serial.println("");
+  Serial.println("Starting UP! ");
+  Serial.println("");
 }
 
 // --------------------------------------------------------------------
@@ -181,11 +184,11 @@ void sendPiData() {
   }
   if (regaddr >= REG_DTME1 && regaddr <= REG_DTME4) {
     Wire.write(timesend[regaddr - REG_DTME1]);
-    delayMicroseconds(3);  // For some reason, this makes it work reliably.
+    delayMicroseconds(10);  // For some reason, this makes it work reliably.
     return;
   }
   Wire.write(regs[regaddr]);
-  delayMicroseconds(3); // For some reason, this makes it work reliably.
+  delayMicroseconds(10); // For some reason, this makes it work reliably.
 }
 
 // --------------------------------------------------------------------

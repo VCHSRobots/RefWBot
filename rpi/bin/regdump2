@@ -1,0 +1,87 @@
+#! /usr/bin/python3
+# regdump -- dump all regs in the ardunio to the command line
+# EPIC Robotz, dlb, Feb 2021
+
+import sys
+from smbus import SMBus
+import arduino_reg_map as reg
+import time
+
+addr = 0x8 # bus address of ardunio
+bus = SMBus(1) # indicates /dev/ic2-1
+
+def writereg(regadr, dat):
+	bus.write_byte_data(addr, regadr, dat)
+
+def readreg(regadr):
+	return bus.read_byte_data(addr, regadr)
+
+def fourbytestolong(u3, u2, u1, u0):
+	x = (u3 << 24) + (u2 << 16) + (u1 << 8) + u0
+	return x
+
+def print_status():
+	id = readreg(reg.SIGV)
+	print("Device Id = %c" % id)
+	u0 = readreg(reg.DTME1)
+	u1 = readreg(reg.DTME2)
+	u2 = readreg(reg.DTME3)
+	u3 = readreg(reg.DTME4)
+	tt = fourbytestolong(u3, u2, u1, u0)
+	print("Device Time = %d  (%02x %02x %02x %02x)" % (tt, u0, u1, u2, u3))
+	bat = readreg(reg.BAT)
+	bat = bat / 10.0
+	print("Battery Voltage = %4.1f" % bat)
+
+def print_analogs():
+	a1 = readreg(reg.A1)
+	a2 = readreg(reg.A2)
+	a3 = readreg(reg.A3)
+	a6 = readreg(reg.A6)
+	a7 = readreg(reg.A7)
+	print("Analog (A1, A2, A3, A6, A7 = %3d %3d %3d %3d %3d" % (a1, a2, a3, a6, a7))
+
+def print_digitals():
+	d = readreg(reg.SI)
+	dc = readreg(reg.SC)
+	d0, dc0 = d, dc
+	sd = ""
+	sc = ""
+	for i in range(6):
+		if (d & 0x20) != 0: sd += " T"
+		else: sd += " F"
+		if (dc & 0x20) != 0: sc += " ^"
+		else: sc += "  "
+		d = d << 1
+		dc = dc << 1
+	print("Digital Bits (D8-D3) = %02x   %s" % (d0, sd))
+	print("Change Bits  (D8-D3) = %02x   %s" % (dc0, sc))
+
+def print_pwms():
+	p9, p10, p11 = readreg(reg.PWM9), readreg(reg.PWM10), readreg(reg.PWM11)
+	print("PWM values (D9-D11) = %3d, %3d, %3d" % (p9, p10, p11))
+
+def print_spares():
+	s1, s2, s3 = readreg(reg.XXX0), readreg(reg.XXX1), readreg(reg.XXX2)
+	print("Spare regs = %3d, %3d, %3d" % (s1, s2, s3))
+
+def print_regs(a0, n):
+	i = 0
+	if n <= 0:
+		return
+	print("Regs[%d-%d]=" % (a0, a0+n-1), end="")
+	while True:
+		if i >= n:
+			return
+		d = readreg(a0 + i)
+		print("%d " % d, end="")
+		i += 1
+	print("")
+
+print_status()
+print_analogs()
+print_digitals()
+print_pwms()
+print_spares()
+print("\n")
+

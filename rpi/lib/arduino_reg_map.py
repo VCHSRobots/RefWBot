@@ -43,6 +43,9 @@ reg_table = ((SIGV,"SIGV"), (BAT,"BAT"), (DTME1,"DTME1"), (DTME2,"DTME2"),
     (A6, "A6"), (A7,"A7"), (SI,"SI"), (SC,"SC"), (SCC,"SCC"), (PWM9,"PWM9"),
     (PWM10,"PWM10"), (PWM11,"PWM11"), (XXX0,"XXX0"), (XXX1,"XXX1"), (XXX2,"XXX2"))
 
+analog_chans = (A1, A2, A3, A6, A7)
+pwm_chans = (PWM9, PWM10, PWM11)
+
 def get_names():
     '''Provides a list of registor names. '''
     names = []
@@ -65,5 +68,6 @@ def name2adr(n):
         i, nn = r 
         if n == nn: return i 
     return -1
+
 
 
