@@ -1,5 +1,5 @@
 # botmain.py -- top level program for on-board robot
-# dlb Feb 2021
+# EPIC Robotz, dlb, Feb 2021
 #
 # This program should be run when the RPi is powered up.
 # It communicates with the hardware and the drive station.
@@ -11,7 +11,7 @@
 
 import paho.mqtt.client as mqtt
 import sys
-import lib.xpwm as xpwm
+import xpwm
 import tkinter as tk
 import tkinter.ttk as ttk
 

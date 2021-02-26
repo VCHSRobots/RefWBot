@@ -1,9 +1,9 @@
 # test_joystick.py -- Test getting joystick input.
-# dlb Feb 2021
+# EPIC Robotz, dlb, Feb 2021
 
 import paho.mqtt.client as mqtt
 import sys
-import lib.xpwm as xpwm
+import xpwm
 
 broker_url = "10.0.5.1"
 broker_port = 1883

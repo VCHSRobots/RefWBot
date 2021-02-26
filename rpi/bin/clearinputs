@@ -1,0 +1,18 @@
+#! /usr/bin/python3
+# clearinputs -- dump all regs in the ardunio to the command line
+# EPIC Robotz, dlb, Feb 2021
+
+from smbus import SMBus
+import arduino_reg_map as reg
+
+addr = 0x8 # bus address of ardunio
+bus = SMBus(1) # indicates /dev/ic2-1
+
+def writereg(regadr, dat):
+	bus.write_byte_data(addr, regadr, dat)
+
+def readreg(regadr):
+	return bus.read_byte_data(addr, regadr)
+
+writereg(reg.SCC, 0)
+print("Change bits should be cleared.")

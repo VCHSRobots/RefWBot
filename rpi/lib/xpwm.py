@@ -1,5 +1,5 @@
 # xpwm.py -- extra pwm signals via PCA9685 module.
-# dlb  Feb 2021
+# EPIC Robotz, dlb, Feb 2021
 
 from smbus import SMBus
 import time

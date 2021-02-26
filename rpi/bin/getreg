@@ -1,9 +1,10 @@
 #! /usr/bin/python3
-
 # getreg -- python cli program to get data from a reg on the ardunio
+# EPIC Robotz, dlb, Feb 2021
 
 import sys
 from smbus import SMBus
+import arduino_reg_map as reg
 
 addr = 0x8 # bus address of ardunio
 bus = SMBus(1) # indicates /dev/ic2-1
@@ -14,20 +15,44 @@ def writereg(regadr, dat):
 def readreg(regadr):
 	return bus.read_byte_data(addr, regadr)
 
+def fmtbinary(x):
+	s = ""
+	for i in range(8):
+		if x & 0x80 != 0: s += "1"
+		else: s += "0"
+		x = x << 1
+	return s
+
+
 if len(sys.argv) < 2:
-	print("getreg -- gets a register in the ardunio using the i2c bus.\n")
-	print("Usage: getreg regnum\nwhere regnum is the number of the registor to access.\n")
+	i = 0
+	snames = ""
+	allnames = reg.get_names()
+	for n in allnames:
+		if i % 6 == 0 and snames != "": snames += "\n"
+		snames += n + " "
+		i += 1
+	print("getreg -- gets a register in the ardunio using the i2c bus.")
+	print("Usage: getreg reg")
+	print("where reg is the interger number of a registor, or it is")
+	print("one of the following:")
+	print("%s\n" % snames)
 	sys.exit()
 
-try:
-	regnum = int(sys.argv[1])
-except ValueError:
-	print("Argument must be a number.\n")
-	sys.exit()
-if regnum < 0 or regnum > 1000:
-	print("Register number out of range.\n")
-	sys.exit()
+regname = sys.argv[1]
+rnum = reg.name2adr(regname)
+if rnum < 0:
+	# Maybe its a number.
+	try:
+		rnum = int(sys.argv[1])
+	except ValueError:
+		print("%s is not a known registor name." % regname)
+		sys.exit()
+	if rnum < 0 or rnum > reg.LAST:
+		print("Registor numbers must be between 0 and %d." % reg.LAST)
+		sys.exit()
 
-dd = readreg(regnum)
-print("Reg[%d] = %d.\n" % (regnum, dd))
+dd = readreg(rnum) 
+rname = reg.adr2name(rnum)
+print("Reg %s [%d] = %d = 0x%02x  = [%s].\n" % (rname, rnum, dd, dd, fmtbinary(dd)))
 

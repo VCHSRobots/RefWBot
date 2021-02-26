@@ -2,6 +2,22 @@
 
 The code in this folder and it's sub folders is intended to implement the drive station for a WaterBot on a PC, running Windows 10.
 
+## Site Specific Configuration
+The python reference code imports from a embeded lib directory.  You must add that lib 
+directory to the python's search path by creating pth file in a site-packages folder.
+
+For example, say that you have cloned this repository to C:\User\johndoe\Documents\RefWBot.  Then the embedded lib will be located here:
+
+    C:\User\johndoe\Documents\RefWBot\pc\lib
+
+You will need to create a file named "waterbot_pc.pth" file in the site-packages directory on your computer and put one line containing the directory in it.  That is, put the line above in the waterbot_pc.pth file.  The pth file sould be stored in the site-packages folder that can be found by starting a python REPL on a command line, importing sys, and typeing sys.path.  Pick a local site-packages directory to copy your pth file to.  For example, after creating the waterbot_pc.pth file with the proper path in it, on a commmand line do:
+
+    copy waterbot_pc.pth C:\Users\johndoe\AppData\Local\Programs\Python\Python39\Lib\site-packages\waterbot_pc.pth
+
+An example waterbot_pc.pth is included in this repository, but it probably won't work for you until you edit it and provide the proper directory.
+
+## Development Environment
+
 To properly set up a development enviroment, your PC should be equiped with the following:
 
 1. Install vscode:   https://code.visualstudio.com/

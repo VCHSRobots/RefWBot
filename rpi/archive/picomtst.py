@@ -1,5 +1,5 @@
 # picomtst.py -- simple program to test the communications between ardunio and pi
-# dlb  Feb 21
+# EPIC Robotz, dlb, Feb 2021
 
 from smbus import SMBus
 import random

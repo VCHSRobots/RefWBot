@@ -1,5 +1,5 @@
 # A test of basic mqtt message subscribe
-# dlb Feb 21
+# EPIC Robotz, dlb, Feb 2021
 
 import paho.mqtt.client as mqtt
 

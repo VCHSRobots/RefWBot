@@ -1,5 +1,5 @@
 # picmd.py -- simple program to test i2c link between pi and ardunio
-# dlb  Feb 21
+# EPIC Robotz, dlb, Feb 2021
 
 from smbus import SMBus
 import time

@@ -1,0 +1,59 @@
+#! /usr/bin/python3
+# setpwm -- set a pwm value in the arduino
+# EPIC Robotz, dlb, Feb 2021
+
+import sys
+from smbus import SMBus
+import arduino_reg_map as reg
+import time
+
+addr = 0x8 # bus address of ardunio
+bus = SMBus(1) # indicates /dev/ic2-1
+
+def writereg(regadr, dat):
+	bus.write_byte_data(addr, regadr, dat)
+
+def readreg(regadr):
+	return bus.read_byte_data(addr, regadr)
+
+
+if len(sys.argv) < 3:
+	print("setpwm -- sets the pwm of an output pwm pin on the arduino.")
+	print("usage: setpwm chan val")
+	print("where chan is one of [0, 9, 10, 11], and the val is 0-255.")
+	print("use chan=0 to set all pwm values at once.")
+	sys.exit()
+
+try:
+	chan = int(sys.argv[1])
+	val = int(sys.argv[2])
+except ValueError:
+	print("Arguments must be numbers.")
+	sys.exit()
+
+if chan != 0 and chan != 9 and chan != 10 and chan != 11:
+	print("Unknown channel number.  Must be 0, 9, 10, or 11.")
+	sys.exit()
+
+if val < 0 or val > 255:
+	print("Val out of range. Must be 0-255.")
+	sys.exit()
+
+if chan == 0: 
+	writereg(reg.PWM9, val)
+	writereg(reg.PWM10, val)
+	writereg(reg.PWM11, val)
+	print("All PWM values set to %d." % val)
+	sys.exit()
+
+r = -1
+if chan == 9: r = reg.PWM9 
+if chan == 10: r = reg.PWM10
+if chan == 11: r = reg.PWM11
+if r == -1:
+	print("Unknown pwm channel.")
+	sys.exit()
+
+writereg(r, val)
+print("PWM for D-%d set to %d." % (chan, val))
+

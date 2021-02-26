@@ -1,5 +1,5 @@
 # test_gps.py -- Shows that the GPS is working
-# dlb Feb 2021
+# EPIC Robotz, dlb, Feb 2021
 
 from micropyGPS import MicropyGPS
 import sys
@@ -24,7 +24,7 @@ def run_gps():
         print("Unable to open gps serial input.\n")
         sys.exit()
     nerr = 0
-    while True:
+    while True: 
         if quit_background: return
         x = f.read(10)
         for ix in x: 

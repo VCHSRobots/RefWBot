@@ -1,7 +1,7 @@
 # test_joystick.py -- simple program to test the pc's joystick
-# dlb Feb 2021
+# EPIC Robotz, dlb, Feb 2021
 
-import lib.joystick as joystick
+import joystick
 import sys
 
 gotpad = joystick.openGamepad()

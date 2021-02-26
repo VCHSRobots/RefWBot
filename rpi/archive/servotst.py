@@ -1,5 +1,5 @@
 # servotst.py -- See if we can control the PCA9685 board
-# dlb  Feb 21
+# EPIC Robotz, dlb, Feb 2021
 
 from smbus import SMBus
 import time

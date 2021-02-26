@@ -1,7 +1,6 @@
 #! /usr/bin/python3.7
-
 # initservos -- Init the servo board connected to the pi
-# dlb  Feb 21
+# EPIC Robotz, dlb, Feb 2021
 
 from smbus import SMBus
 import time

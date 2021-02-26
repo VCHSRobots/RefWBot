@@ -1,4 +1,5 @@
 # test_plot.py -- Simple program to show how to display graphs and plots.
+# 
 # use pip to install the numpy and matplotlib packages.
 # copied from the internet at 
 # https://matplotlib.org/gallery/lines_bars_and_markers/cohere.html#sphx-glr-gallery-lines-bars-and-markers-cohere-py

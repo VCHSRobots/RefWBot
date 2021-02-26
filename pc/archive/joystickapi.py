@@ -1,3 +1,5 @@
+# This was copied from the web...
+
 import ctypes
 
 winmmdll = ctypes.WinDLL('winmm.dll')

@@ -1,5 +1,5 @@
 # joystick.py -- Interfaces with a Logitech joystick
-# dlb Feb 2021
+# EPIC Robotz, dlb, Feb 2021
 #
 # Much of this code was copied from stackoverflow:
 # https://stackoverflow.com/questions/60309652/how-to-get-usb-controller-gamepad-to-work-with-python
