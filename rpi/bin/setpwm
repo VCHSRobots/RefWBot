@@ -21,22 +21,36 @@ if len(sys.argv) < 3:
 	print("setpwm -- sets the pwm of an output pwm pin on the arduino.")
 	print("usage: setpwm chan val")
 	print("where chan is one of [0, 9, 10, 11], and the val is 0-255.")
+	print("chan can also be all, pwm9, pwm10, pwm11.")
 	print("use chan=0 to set all pwm values at once.")
 	sys.exit()
 
-try:
-	chan = int(sys.argv[1])
-	val = int(sys.argv[2])
-except ValueError:
-	print("Arguments must be numbers.")
-	sys.exit()
+chan = -1
+schan = sys.argv[1]
+if schan == "all" or schan == "ALL": chan = 0
+if schan == "pwm9" or schan == "PWM9": chan = 9
+if schan == "pwm10" or schan == "PWM10": chan = 10
+if schan == "pwm11" or schan == "PWM11": chan = 11
+
+if chan < 0:
+	try:
+		chan = int(sys.argv[1])
+	except:
+		print("Argument for chan is invalid.")
+		sys.exit()
 
 if chan != 0 and chan != 9 and chan != 10 and chan != 11:
 	print("Unknown channel number.  Must be 0, 9, 10, or 11.")
 	sys.exit()
 
+try:
+	val = int(sys.argv[2])
+except ValueError:
+	print("Argument for pwm value must be numbers.")
+	sys.exit()
+
 if val < 0 or val > 255:
-	print("Val out of range. Must be 0-255.")
+	print("Argument for pwm value is out of range. Must be 0-255.")
 	sys.exit()
 
 if chan == 0: 
@@ -55,5 +69,5 @@ if r == -1:
 	sys.exit()
 
 writereg(r, val)
-print("PWM for D-%d set to %d." % (chan, val))
+print("PWM channel %d set to %d." % (chan, val))
 
