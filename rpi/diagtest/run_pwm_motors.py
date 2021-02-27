@@ -30,7 +30,7 @@ def run_in_background():
             arduino.set_pwm("ALL", 0)
             return
         cnt += 1
-        if cnt % 200: print("loop count: %d. A1, A2 = %5.3f %5.3f" % (cnt, a1, a2))
+        if cnt % 50 == 0: print("loop count: %d. A1, A2 = %5.3f %5.3f  Errs = %ld" % (cnt, a1, a2, errcnt))
         try: 
             a1 = arduino.get_analog("A1")
             a2 = arduino.get_analog("A2")

@@ -43,8 +43,8 @@
 #define REG_A3       8   // R0  Voltage on pin A3, 0-255.  (Read once every 20ms)
 #define REG_A6       9   // R0  Voltage on pin A6, 0-255.  (Read once every 20ms)
 #define REG_A7      10   // R0  Voltage on pin A7, 0-255.  (Read once every 20ms)
-#define REG_SI      11   // R0  Sensor Inputs, 8 bits maped as: 0, 0, D8, D7, D6, D5, D4, D3
-#define REG_SC      12   // RO  Sensor Chages, 8 bits maped as: 0, 0, D8, D7, D6, D5, D4, D3
+#define REG_SI      11   // R0  Sensor Inputs, 8 bits maped as: D12, 0, D8, D7, D6, D5, D4, D3
+#define REG_SC      12   // RO  Sensor Chages, 8 bits maped as: D12, 0, D8, D7, D6, D5, D4, D3
 #define REG_SCC     13   // RW  Sensor Change Clear: 0=clear, 1=keep for each bit.
 #define REG_PWM9    14   // RW  PWM Output on D9: 0-255
 #define REG_PWM10   15   // RW  PWM Output on D10: 0-255
@@ -60,7 +60,8 @@
 int ardunio_ic2_addr = 0x8;  // Sets the address of this arduino for the RPi to access
 int bat_input_pin = A0;
 int bat_monitor_pin = 2;
-int pi_intr_pin = 12;
+int pi_restart_cmd_pin = 12;   // Signal from PI to restart
+int pi_intr_pin = 13;         
 
 volatile long timenext;
 volatile long timenow;
@@ -87,6 +88,7 @@ void setup() {
   pinMode(9, OUTPUT);
   pinMode(10, OUTPUT);
   pinMode(11, OUTPUT);
+  pinMode(pi_restart_cmd_pin, INPUT_PULLUP);
   analogWrite(9, 0);
   analogWrite(10, 0);
   analogWrite(11, 0);
@@ -115,6 +117,7 @@ void loop() {
   monitor_inputs();
   report_status();
   pi_comm();
+  pi_restart();
 }
 
 // --------------------------------------------------------------------
@@ -159,6 +162,22 @@ void receivePiCmd(int msglen) {
     analogWrite(11, dat);
   }
   regs[regaddr] = dat;
+}
+
+// --------------------------------------------------------------------
+// pi_restart() 
+// Here, we monitor the pi restart signal.  This signal is sent
+// on a digital input to inform us that something is very wrong
+// with the I2C bus (on our side), and we must fix it by restarting.
+long tme_rst_past = 0;
+void pi_restart() {
+    if (digitalRead(pi_restart_cmd_pin) == LOW) {
+      if (timenow - tme_rst_past > 5000) {
+        tme_rst_past = timenow;
+          Serial.println("*** Restart command detected from RPi,");
+          Serial.println("*** (Not implimented here yet.");
+      }
+    }
 }
 
 // --------------------------------------------------------------------
@@ -269,6 +288,7 @@ byte read_digital_inputs() {
       v = ((v << 1) & 0xFE) | 0x01;
     }
   }
+  if (digitalRead(pi_restart_cmd_pin) == HIGH) v = v | 0x80;
   return v;
 }
 
@@ -298,16 +318,16 @@ void monitor_inputs() {
 
 // --------------------------------------------------------------------
 // fmt_io() 
-// Format the iobyte into on/off bits. Input string should be at least 13
+// Format the iobyte into on/off bits. Input string should be at least 17
 // characters long.
 void fmt_io(char *str, byte iobyte, char con, char coff) {
-  for (int i = 0; i < 6; i++) {
+  for (int i = 0; i < 8; i++) {
     str[i*2] = ' ';
-    if ((iobyte & 0x20) != 0) str[i*2 + 1] = con;
+    if ((iobyte & 0x80) != 0) str[i*2 + 1] = con;
     else str[i*2 + 1] = coff;
     iobyte = iobyte << 1;
   }
-  str[12] = 0;
+  str[16] = 0;
 }
 
 // --------------------------------------------------------------------
