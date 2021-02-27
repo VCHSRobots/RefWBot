@@ -1,0 +1,10 @@
+#! /usr/bin/python3.7
+# killservos -- Turn off all channels on the servo modula board
+# EPIC Robotz, dlb, Feb 2021
+
+import xpwm
+
+xpwm.board_init()
+for i in range(16):
+  xpwm.set_pwm(i, 0)
+print("All pwm should be shut down on servo module.")
