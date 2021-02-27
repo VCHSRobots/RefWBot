@@ -350,10 +350,10 @@ void report_status() {
     sprintf(strbuf, "Spare Regs (17-19) = %3d %3d %3d", regs[REG_XXX0], regs[REG_XXX1], regs[REG_XXX2]);
     Serial.println(strbuf);
 
-    sprintf(strbuf, "Receive/Send counts = %d, %d", reccnt, sendcnt);
+    sprintf(strbuf, "Receive/Send counts = %ld, %ld", reccnt, sendcnt);
     Serial.println(strbuf);
 
-    sprintf(strbuf, "Bad Message count = %d", badmsgcount);
+    sprintf(strbuf, "Bad Message count = %ld", badmsgcount);
     Serial.println(strbuf);
 
     long tdelta = millis() - t0;

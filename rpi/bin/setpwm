@@ -16,7 +16,6 @@ def writereg(regadr, dat):
 def readreg(regadr):
 	return bus.read_byte_data(addr, regadr)
 
-
 if len(sys.argv) < 3:
 	print("setpwm -- sets the pwm of an output pwm pin on the arduino.")
 	print("usage: setpwm chan val")
