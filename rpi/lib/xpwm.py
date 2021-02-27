@@ -6,7 +6,7 @@ import time
 
 addr = 0x4c # bus addres of PCA9685 board
 bus = SMBus(1) # indicates /dev/ic2-1
-masterfreq =  25000000  # discovered by experiments
+default_masterfreq =  25000000  # acording to the specs
 pwm_inited = False
 
 # Registors
@@ -33,7 +33,7 @@ b_invrt   = 1 << 4  # Enables inverted output state. Not needed by us.
 b_och     = 1 << 3  # Controls with PWM settings take effect. We want 1 for immediate.
 b_outdrv  = 1 << 2  # Sets totem pole (1) or Open Drain (0) outputs. We want 1.
 
-usec_per_tick = 4.84  # This is assummed
+usec_per_tick = 4.84  # Recalculated when frequency is set.
 
 def write_reg(reg, dat):
 	bus.write_byte_data(addr, reg, dat)
@@ -55,13 +55,14 @@ def set_pwm(chan, pulsewidth_usec):
     write_reg(regnum + 2, byteL) # Low byte of off time
     write_reg(regnum + 3, byteH) # High byte of off time
 
-def set_frequency(hz):
+def set_frequency(hz, masterfreq=2500000):
     ''' Sets the PWM frequency for all channels. Default is 50 Hz. '''
     global usec_per_tick
     prescale = int(round(masterfreq / (4096.0 * hz)) -1)
     if prescale < 3: prescale = 3
     if prescale > 255: prescale = 255
-    # to change preset, must put device in sleep mode!
+    print("prescale=%f" % prescale)
+    # to change preset, must p ut device in sleep mode!
     mode = read_reg(r_mode1)
     write_reg(r_mode1, (mode & ~b_sleep) | b_sleep)
     write_reg(r_prescale, prescale)
@@ -69,8 +70,9 @@ def set_frequency(hz):
     time.sleep(0.0005)	# allow oscillator to get going again
     write_reg(r_mode1, mode | b_restart)  # reset the restart bit
     usec_per_tick = 1000000 / (masterfreq / prescale)
+    print("usec_per_tick=%f" % usec_per_tick)
 
-def board_init():
+def board_init(masterfreq = default_masterfreq):
     ''' Initialize PWM module -- must be called before setting pwm signals. '''
     global pwm_inited
     # set overall modes with the two main registors
@@ -81,13 +83,13 @@ def board_init():
     mode = read_reg(r_mode1)
     write_reg(r_mode1, mode & ~b_sleep)
     time.sleep(0.0005)
-    set_frequency(50)
+    set_frequency(50, masterfreq=masterfreq)
     pwm_inited = True 
 
 def set_servo(chan, rotation):
     ''' Set servo rotation from 0 (lowest angle) to 1 (highest angle).
          
          Note: Some servos will not respond to extream settings. '''
-    usec = 750 + rotation * 1650
+    usec = 750 + rotation * 1500
     set_pwm(chan, usec)
  
