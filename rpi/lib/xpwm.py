@@ -93,3 +93,7 @@ def set_servo(chan, rotation):
     usec = 750 + rotation * 1500
     set_pwm(chan, usec)
  
+def killall():
+    ''' Shuts down pwm on all channels. '''
+    for i in range(15):
+      set_pwm(i, 0)
