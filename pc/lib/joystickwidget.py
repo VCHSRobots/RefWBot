@@ -29,6 +29,8 @@ class JoystickWidget(tk.Frame):
             xorg+linewidth, yorg-(barwidth2-linewidth), fill="red", outline="red")
         self.ydir = self.drawsurface.create_rectangle(xorg-(barwidth2-linewidth), yorg-linewidth,
             xorg+(barwidth2-linewidth), yorg+linewidth, fill="red", outline="red")
+        self.dot = self.drawsurface.create_oval(xorg-(barwidth2-linewidth), yorg-(barwidth2-linewidth),
+            xorg+(barwidth2-linewidth), yorg+(barwidth2-linewidth), fill="red", outline="red")
         self.joyaxis = (0.0, 0.0, 0.0)
         self.joybtns = [False for x in range(12)]
         self.showaxes()
@@ -61,7 +63,12 @@ class JoystickWidget(tk.Frame):
         self.joyaxis = tuple(r)
 
     def showaxes(self):
-        pass
+      x, y, z = self.joyaxis
+      ix, iy = xorg - int(x * (barlen2-linewidth)), yorg - int(y * (barlen2-linewidth))
+      x0, y0, x1, y1 = xorg, yorg + barwidth2 - linewidth, ix, yorg - barwidth2
+      self.drawsurface.coords(self.xdir, x0, y0, x1, y1)
+      x0, y0, x1, y1 = xorg + barwidth2 - linewidth, yorg, xorg - barwidth2, iy
+      self.drawsurface.coords(self.ydir, x0, y0, x1, y1)
 
     def showbtns(self):
         pass
