@@ -14,6 +14,8 @@ game_telesecs = 240
 game_autosecs = 30
 game_warnsecs = 15
 
+desiredsize = (250, 210)  # desired size of widget for placing.
+
 class GameClockWidget(tk.Frame):
 
     def __init__(self, parent):
@@ -25,9 +27,9 @@ class GameClockWidget(tk.Frame):
         self._clocklabel = tk.Label(self, text="4:00", anchor="center", font=self._bigfont)
         self._mainbutton = tk.Button(self, text="Start Match", font=self._btnfont, 
             width=10, bg="darkgray", command=self._switch_mode)
-        self._modelabel.pack(side="top", fill="x", padx=10)
-        self._clocklabel.pack(side="top", fill="x", padx=10, pady=10)
-        self._mainbutton.pack(side="bottom", fill="x", padx=10, pady=10)
+        self._modelabel.pack(side="top", fill="x", padx=10, pady=5)
+        self._clocklabel.pack(side="top", fill="x", padx=10, pady=5)
+        self._mainbutton.pack(side="top", fill="x", padx=10)
         self._current_modenum = 0
         self._clockrunning = False
         self._clockvalue = game_telesecs + game_autosecs  # Clock value at clock0
@@ -37,6 +39,9 @@ class GameClockWidget(tk.Frame):
         self._lastclock = (-1, -1, "black")
         self._showclock(self._clockvalue)
         self.after(50, self._updater)
+
+    def get_size(self):
+        return desiredsize
 
     def _updater(self):
         ''' Timer update of clock and modes. '''

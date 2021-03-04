@@ -6,8 +6,9 @@ import tkinter.font as tkFont
 import math
 
 # Constants to control the layout of the diagram:
-horz_px = 200 # horzontal size of the the widget in pixels
-vert_px = 200 # vertial size of the widget in pixels
+desiredsize = (250, 230) # desired size of widget for placing
+horz_px = 210 # horzontal size of the the widget in pixels
+vert_px = 210 # vertial size of the widget in pixels
 blockout = (0, 0, 200, 180) # block out rect for invalid flag
 xorg = 100 # x orgin of the complete diagram. which is center of main cross bars.
 yorg = 100 # y orgin of the complete diagram, which is center of main cross bars.
@@ -24,7 +25,7 @@ btnrectslocs=((-4, -88), (-25, -75), (16, -65), (26, -65), (16, -75), (26, -75),
 
 class JoystickWidget(tk.Frame):
     def __init__(self, parent):
-        tk.Frame.__init__(self, parent, borderwidth=2, relief="groove")
+        tk.Frame.__init__(self, parent, borderwidth=2, relief="groove", bg="white")
         self._canvas = tk.Canvas(self, width=horz_px, height=vert_px, borderwidth=0,
             highlightthickness=0, background='white')
         self._canvas.pack(padx=10, pady=10)
@@ -85,6 +86,9 @@ class JoystickWidget(tk.Frame):
         self._showaxes()
         self._showbtns()
         self._showruv()
+  
+    def get_size(self):
+        return desiredsize
 
     def set_mode(self, mode):
         ''' Sets the mode of the joystick.  Can be 'active' or 'invalid'.

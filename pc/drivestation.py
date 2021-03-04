@@ -22,17 +22,29 @@ class DriveStation(tk.Frame):
         tk.Frame.__init__(self, parent)
         if enable_mqtt: self.mqtt = mi.MqttInterface()
         else: self.mqtt = None
-        self.titlefont = tkFont.Font(family="Copperplate Gothic Bold", size=28)
-        self.namefont = tkFont.Font(family="Copperplate Gothic Light", size=22)
+        self.titlefont = tkFont.Font(family="Copperplate Gothic Bold", size=24)
+        self.namefont = tkFont.Font(family="Copperplate Gothic Light", size=20)
         self.titlelabel = tk.Label(self, text=title, anchor="center", font=self.titlefont)
         self.namelabel = tk.Label(self, text=teamname, anchor="center", font=self.namefont)
         self.gameclock = gameclockwidget.GameClockWidget(self)
         self.joystick = joystickwidget.JoystickWidget(self)
 
-        self.titlelabel.pack(side="top", fill="x", padx=4, pady=4)
-        self.namelabel.pack(side="top", fill="x", padx=4, pady=4)
-        self.gameclock.pack(side="top", fill="x", padx=4, pady=4)
-        self.joystick.pack(side="top", fill="x", padx=4, pady=4)
+        #self.titlelabel.pack(side="top", fill="x", padx=4, pady=4)
+        #self.namelabel.pack(side="top", padx=4, pady=4)
+        #self.gameclock.pack(side="top", padx=4, pady=4)
+        #self.joystick.pack(side="top", padx=4, pady=4)
+        
+        y = 5
+        self.titlelabel.place(x=0, y=y, width=300, height=30)
+        y += 30
+        self.namelabel.place(x=0, y=y, width=300, height=30)
+        y += 40
+        w, h = self.gameclock.get_size()
+        self.gameclock.place(x=25, y=y, width=w, height=h)
+        y += h + 10
+        w, h = self.joystick.get_size()
+        self.joystick.place(x=25, y=y, width=w, height=h)
+        y += h + 10
         self.quitbackgroundtasks = False
         self.bg_count = 0
         self.last_btns = []
