@@ -4,7 +4,7 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 import tkinter.messagebox as tkbox
-import lib.joystick as joystick
+import joystick as joystick
 import threading
 import time
 import paho.mqtt.client as mqtt

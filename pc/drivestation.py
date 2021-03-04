@@ -4,29 +4,24 @@
 import sys
 import tkinter as tk
 import tkinter.font as tkFont
+import mqttinterface as mi 
 import gameclockwidget
 import joystickwidget
 import joystick
 import threading
 import time
-import paho.mqtt.client as mqtt
 
 title = "EPIC ROBOTZ"
 teamname = "Reference Bot"
-
-def on_connect(client, userdata, flags, rc):
-    print("Connected to MQTT Broker. Code: " + rc)
-
-broker_url = "10.0.5.1"
-broker_port = 1883
 
 if joystick.openGamepad(): joy_status = "Joystick Detected."
 
 class DriveStation(tk.Frame):
 
-    def __init__(self, parent, mqtt_client):
+    def __init__(self, parent, enable_mqtt=True):
         tk.Frame.__init__(self, parent)
-        self.mqtt_client = mqtt_client
+        if enable_mqtt: self.mqtt = mi.MqttInterface()
+        else: self.mqtt = None
         self.titlefont = tkFont.Font(family="Copperplate Gothic Bold", size=28)
         self.namefont = tkFont.Font(family="Copperplate Gothic Light", size=22)
         self.titlelabel = tk.Label(self, text=title, anchor="center", font=self.titlefont)
@@ -38,20 +33,22 @@ class DriveStation(tk.Frame):
         self.namelabel.pack(side="top", fill="x", padx=4, pady=4)
         self.gameclock.pack(side="top", fill="x", padx=4, pady=4)
         self.joystick.pack(side="top", fill="x", padx=4, pady=4)
-        self.quit = False
+        self.quitbackgroundtasks = False
         self.bg_count = 0
         self.last_btns = []
         self.last_xyz = []
         self.last_ruv = []
       
     def background_joystick(self):
-        global joystick_quit
         while True:
             btns = joystick.getGamepadButtons()
             xyz = joystick.getGamepadAxis()
             ruv = joystick.getGamepadRot()
-            self.joystick.setaxis(*xyz)
-            if self.mqtt_client:
+            self.joystick.set_axis(*xyz)
+            self.joystick.set_ruv(*ruv)
+            self.joystick.set_buttons(*btns)
+            #self.joystick.set_mode("invalid")
+            if self.mqtt:
                 # send out joystick values to robot here...
                 if self.last_btns != btns:
                     self.last_btns = btns
@@ -59,18 +56,18 @@ class DriveStation(tk.Frame):
                     for i in btns:
                         if i: s += "T " 
                         else: s += "F "
-                    mqtt_client.publish(topic="WBot/Joystick/Buttons", payload=s.encode("ascii"), qos=1, retain=True)
+                    self.mqtt.publish("WBot/Joystick/Buttons", s)
                 if self.last_xyz != xyz:
                     self.last_xyz = xyz
-                    s = "%7.4f %7.4f %7.4f" % xyz
-                    mqtt_client.publish(topic="WBot/Joystick/xyz", payload=s.encode("ascii"), qos=1, retain=True)
-                if last_ruv != ruv:
+                    s = "%7.4f %7.4f %7.4f" % tuple(xyz)
+                    self.mqtt.publish("WBot/Joystick/xyz", s)
+                if self.last_ruv != ruv:
                     self.last_ruv = ruv
-                    s = "%7.4f %7.4f %7.4f" % ruv
-                    mqtt_client.publish(topic="WBot/Joystick/ruv", payload=s.encode("ascii"), qos=1, retain=True)
+                    s = "%7.4f %7.4f %7.4f" % tuple(ruv)
+                    self.mqtt.publish("WBot/Joystick/ruv", s)
             self.bg_count += 1
             # if self.bg_count % 100 == 0: print("Background Loop: %d." % self.bg_count)
-            if self.quit: 
+            if self.quitbackgroundtasks: 
               print("Quitting the joystick thread.")
               return
             time.sleep(0.015)
@@ -81,9 +78,10 @@ class DriveStation(tk.Frame):
         self.bgid.start()
 
     def stop_all(self):
-        global joystick_quit
-        self.quit = True
-    
+        self.quitbackgroundtasks = True
+        if self.mqtt: 
+            if self.mqtt.is_connected(): self.mqtt.close()
+
 if __name__ == "__main__":
     enable_mqtt = True
     for a in sys.argv[1:]:
@@ -91,20 +89,11 @@ if __name__ == "__main__":
         print("MQTT disabled.")
         enable_mqtt = False
 
-    if enable_mqtt:
-      mqtt_client = mqtt.Client()
-      mqtt_client.connect(broker_url, broker_port)
-      mqtt_client.loop_start()
-    else: 
-      mqtt_client = None
-
     root = tk.Tk()
     root.title("Driver Station for Water Bot")
     root.geometry('300x900')
-    ds = DriveStation(root, mqtt_client)
+    ds = DriveStation(root, enable_mqtt=enable_mqtt)
     ds.place(x=0, y=0, relwidth=1, relheight=1)
     ds.start_background()
     root.mainloop()
     ds.stop_all()
-    if mqtt_client:
-      mqtt_client.loop_stop()
