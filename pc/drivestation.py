@@ -13,37 +13,38 @@ import time
 
 title = "EPIC ROBOTZ"
 teamname = "Reference Bot"
-
-if joystick.openGamepad(): joy_status = "Joystick Detected."
+wx, wy = 300, 800
 
 class DriveStation(tk.Frame):
 
     def __init__(self, parent, enable_mqtt=True):
         tk.Frame.__init__(self, parent)
+        
+        # Hardware setup
         if enable_mqtt: self.mqtt = mi.MqttInterface()
         else: self.mqtt = None
+        # self.joystick_device = joystick.Joystick(style="Logitech 3D")
+        self.joystick_device = joystick.Joystick(style="Noname Gamepad")
+
+        # GUI setup
         self.titlefont = tkFont.Font(family="Copperplate Gothic Bold", size=24)
         self.namefont = tkFont.Font(family="Copperplate Gothic Light", size=20)
         self.titlelabel = tk.Label(self, text=title, anchor="center", font=self.titlefont)
         self.namelabel = tk.Label(self, text=teamname, anchor="center", font=self.namefont)
         self.gameclock = gameclockwidget.GameClockWidget(self)
-        self.joystick = joystickwidget.JoystickWidget(self)
+        self.joystick_ui = joystickwidget.JoystickWidget(self)
 
-        #self.titlelabel.pack(side="top", fill="x", padx=4, pady=4)
-        #self.namelabel.pack(side="top", padx=4, pady=4)
-        #self.gameclock.pack(side="top", padx=4, pady=4)
-        #self.joystick.pack(side="top", padx=4, pady=4)
-        
+        # Layout, do it manually to get exactly what we want.
         y = 5
-        self.titlelabel.place(x=0, y=y, width=300, height=30)
+        self.titlelabel.place(x=0, y=y, width=wx, height=30)
         y += 30
-        self.namelabel.place(x=0, y=y, width=300, height=30)
+        self.namelabel.place(x=0, y=y, width=wx, height=30)
         y += 40
         w, h = self.gameclock.get_size()
-        self.gameclock.place(x=25, y=y, width=w, height=h)
+        self.gameclock.place(x=int((wx-w)/2), y=y, width=w, height=h)
         y += h + 10
-        w, h = self.joystick.get_size()
-        self.joystick.place(x=25, y=y, width=w, height=h)
+        w, h = self.joystick_ui.get_size()
+        self.joystick_ui.place(x=int((wx-w)/2), y=y, width=w, height=h)
         y += h + 10
         self.quitbackgroundtasks = False
         self.bg_count = 0
@@ -53,12 +54,17 @@ class DriveStation(tk.Frame):
       
     def background_joystick(self):
         while True:
-            btns = joystick.getGamepadButtons()
-            xyz = joystick.getGamepadAxis()
-            ruv = joystick.getGamepadRot()
-            self.joystick.set_axis(*xyz)
-            self.joystick.set_ruv(*ruv)
-            self.joystick.set_buttons(*btns)
+            btns = self.joystick_device.get_buttons()
+            xyz = self.joystick_device.get_axis()
+            ruv = self.joystick_device.get_ruv()
+            haveconnection = self.joystick_device.is_connected()
+            if haveconnection: 
+                self.joystick_ui.set_mode('active')
+            else: 
+                self.joystick_ui.set_mode('invalid')
+            self.joystick_ui.set_axis(*xyz)
+            self.joystick_ui.set_ruv(*ruv)
+            self.joystick_ui.set_buttons(*btns)
             #self.joystick.set_mode("invalid")
             if self.mqtt:
                 # send out joystick values to robot here...
