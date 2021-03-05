@@ -1,175 +1,204 @@
-# joystick.py -- Interfaces with a Logitech joystick
-# EPIC Robotz, dlb, Feb 2021
+# joystick.py -- Provides access to the joystick
+# EPIC Robots, dlb, Feb 2021
 #
-# Much of this code was copied from stackoverflow:
-# https://stackoverflow.com/questions/60309652/how-to-get-usb-controller-gamepad-to-work-with-python
+# This code is intended to provide a platform independent api for 
+# obtaining joystick information.  However, currently it 
+# entirely depends on rawjoystick_win -- meaning, for now, 
+# only Windows is supported.
 #
-# However, the openGamepad(), getGamepadButtons(), getGamepadAxis() and getGamepadRot() were added.
-# Note, the advantage of this code verses other solutions, such as pygame, is that it is very lightweight.
-# By using the ctypes package, this code interfaces directly with the windows OS.
+# Notes on Idenification
+# ----------------------
+# Joystick devices are Human Interface Devices (HID) which plug
+# into a USB port, and as such they are identified with a Manufacture's ID and
+# a Product ID, known as the MID and PID. From experiments, we have built the
+# following table:
 #
+#    MID    PID   Style           Description
+#    ---    ---   -----           -----------
+#   1133  49685   Logitech 3D     Logitech Extreme 3D Pro Joystick
+#    121      6   Noname Gamepad  Noname copy of X-Box Gamepad
+#
+# The style and description are our own designations for the MID
+# and PID.  They are returned by the get_style() and 
+# get_description() functions, and appear in the tuple returned from
+# get_devices().
+#  
 
-import ctypes
+import rawjoystick_win as js 
 
-winmmdll = ctypes.WinDLL('winmm.dll')
+known_devices = (
+    ((1133, 49685), "Logitech 3D", "Logitech Extreme 3D Pro Joystick"),
+    ((121,      6), "Noname Gamepad", "Noname copy of X-Box Gamepad"))
 
-# [joyGetNumDevs](https://docs.microsoft.com/en-us/windows/win32/api/joystickapi/nf-joystickapi-joygetnumdevs)
-"""
-UINT joyGetNumDevs();
-"""
-joyGetNumDevs_proto = ctypes.WINFUNCTYPE(ctypes.c_uint)
-joyGetNumDevs_func  = joyGetNumDevs_proto(("joyGetNumDevs", winmmdll))
-
-# [joyGetDevCaps](https://docs.microsoft.com/en-us/windows/win32/api/joystickapi/nf-joystickapi-joygetdevcaps)
-"""
-MMRESULT joyGetDevCaps(UINT uJoyID, LPJOYCAPS pjc, UINT cbjc);
-
-32 bit: joyGetDevCapsA
-64 bit: joyGetDevCapsW
-
-sizeof(JOYCAPS): 728
-"""
-joyGetDevCaps_proto = ctypes.WINFUNCTYPE(ctypes.c_uint, ctypes.c_uint, ctypes.c_void_p, ctypes.c_uint)
-joyGetDevCaps_param = (1, "uJoyID", 0), (1, "pjc", None), (1, "cbjc", 0)
-joyGetDevCaps_func  = joyGetDevCaps_proto(("joyGetDevCapsW", winmmdll), joyGetDevCaps_param)
-
-# [joyGetPosEx](https://docs.microsoft.com/en-us/windows/win32/api/joystickapi/nf-joystickapi-joygetposex)
-"""
-MMRESULT joyGetPosEx(UINT uJoyID, LPJOYINFOEX pji);
-sizeof(JOYINFOEX): 52
-"""
-joyGetPosEx_proto = ctypes.WINFUNCTYPE(ctypes.c_uint, ctypes.c_uint, ctypes.c_void_p)
-joyGetPosEx_param = (1, "uJoyID", 0), (1, "pji", None)
-joyGetPosEx_func  = joyGetPosEx_proto(("joyGetPosEx", winmmdll), joyGetPosEx_param)
-
-# joystickapi - joyGetNumDevs
-def joyGetNumDevs():
-    ''' Returns the number of suitable joysticks/gamepads found on the system. '''
-    try:
-        num = joyGetNumDevs_func()
-    except:
-        num = 0
-    return num
-
-# joystickapi - joyGetDevCaps
-def joyGetDevCaps(uJoyID):
-    try:
-        buffer = (ctypes.c_ubyte * JOYCAPS.SIZE_W)()
-        p1 = ctypes.c_uint(uJoyID)
-        p2 = ctypes.cast(buffer, ctypes.c_void_p)
-        p3 = ctypes.c_uint(JOYCAPS.SIZE_W)
-        ret_val = joyGetDevCaps_func(p1, p2, p3)
-        ret = (False, None) if ret_val != JOYERR_NOERROR else (True, JOYCAPS(buffer))   
-    except:
-        ret = False, None
-    return ret 
-
-# joystickapi - joyGetPosEx
-def joyGetPosEx(uJoyID):
-    try:
-        buffer = (ctypes.c_uint32 * (JOYINFOEX.SIZE // 4))()
-        buffer[0] = JOYINFOEX.SIZE
-        buffer[1] = JOY_RETURNALL
-        p1 = ctypes.c_uint(uJoyID)
-        p2 = ctypes.cast(buffer, ctypes.c_void_p)
-        ret_val = joyGetPosEx_func(p1, p2)
-        ret = (False, None) if ret_val != JOYERR_NOERROR else (True, JOYINFOEX(buffer))   
-    except:
-        ret = False, None
-    return ret 
-
-gamepad_id = -1
-gamepad_caps = None
-gamepad_startinfo = None
-def openGamepad():
-    ''' Opens the first suitable gamepad found connected to the computer.  
-        Returns True if a suitable gamepad is opened. False otherwise. '''
-    global gamepad_id, gamepad_caps, gamepad_startinfo
-    num = joyGetNumDevs()
-    ret, gamepad_caps, gamepad_startinfo = False, None, None
+def get_devices():
+    ''' Returns a list of joystick devices, where each device is
+        a tuple in the form (id, name, mid, pid, style, desc), where id is
+        the identifier given by the OS, name is the name 
+        found in the driver for the device, mid is the
+        manufacture's id, pid is the product id, style is the known
+        model name, and desc is the description of the device. Style
+        and description are obtianed from an internal table derived by
+        experimentation. '''
+    num = js.joyGetNumDevs()
+    x = []
     for id in range(num):
-        ret, gamepad_caps = joyGetDevCaps(id)
-        if ret:
-            # print("gamepad detected: " + gamepad_caps.szPname)
-            ret, gamepad_startinfo = joyGetPosEx(id)
-            gamepad_id = id
-            return True
-    return False
+        okay, caps = js.joyGetDevCaps(id)
+        if okay:
+            style, desc = "", ""
+            for midpid, s, d in known_devices:
+                if midpid == (caps.wMid, caps.wPid):
+                    style, desc = s, d
+                    break
+            x.append((id, caps.szPname, caps.wMid, caps.wPid, style, desc))
+    return x
 
-def haveGamepad():
-    ''' Returns True if a valid gamepad is opened. False otherwise. '''
-    return gamepad_id >= 0
+class Joystick():
+    def __init__(self, id=-1, style=""):
+        ''' Initializes this object to work with the given joystick id or style.
+        If neither the id nor style is given, then the first joystick found on the 
+        system is used.  If the id is given, then it is used.  Otherwise, if
+        style is given, the first joystick with that style is used.'''
+        self._isconnected = False
+        self._is_inited = False    
+        self._errcount = 0
+        self._id = id
+        self._style = style
+        self._desired_midpid = (0, 0)
+        if self._style != "":
+            for midpid, n, _ in known_devices:
+                if self._style == n: self._desired_midpid = midpid
+        self._name = ""
+        self._numaxis = 0
+        self._numbtns = 0
+        self._midpid = (0, 0)
+        self.reset()
 
-def getGamepadButtons():
-    ''' Return a list of at list 12 booleans describing the joystick's button status '''
-    if gamepad_id < 0: return [False for i in range(12)]
-    ret, info = joyGetPosEx(gamepad_id)
-    if not ret: return [False for i in range(12)]
-    btns = [(1<<i) & info.dwButtons != 0 for i in range(gamepad_caps.wNumButtons)]
-    if len(btns) < 12:
-        n = 12 - len(btns)
-        for i in range(n): btns.append(False)
-    return btns
+    def _findjoystick(self):
+        ''' Attemps to find the proper joystick's system id '''
+        if self._id >= 0: return
+        joylist = get_devices()
+        if self._desired_midpid != (0, 0):
+            for i, _ , mid, pid, _, _ in joylist:
+                if (mid, pid) == self._desired_midpid:
+                    self._id = i
+                    return
+        if len(joylist) > 0:
+            self._id = joylist[0][0]
+        
+    def reset(self):
+        ''' Attempts to reconnect and re-init the joystick.'''
+        if self._id < 0:
+            self._findjoystick()
+            if self._id < 0: return
+        okay, caps = js.joyGetDevCaps(self._id)
+        if not okay: return
+        self._is_inited = True
+        self._name = caps.szPname
+        self._numbtns = caps.wNumButtons
+        self._numaxis = caps.wNumAxes
+        self._midpid = (caps.wMid, caps.wPid)
+        self.get_axis()
 
-def getGamepadAxis():
-    ''' Return a list of three floats (-1 to +1) describing the joystick's XYZ axis '''
-    if gamepad_id < 0: return [0, 0, 0]
-    ret, info = joyGetPosEx(gamepad_id)
-    if not ret: return [0.0, 0.0, 0.0]
-    x,y,z = (info.dwXpos - 32678)/32768.0, (info.dwYpos - 32678)/32768.0, (info.dwZpos - 32678)/32768.0
-    x,y,z = -x, -y, -z  
-    return (x, y, z)
-
-def getGamepadRot():
-    ''' Return a list of three floats (-1 to +1) describing the joystick's rotational axis '''
-    if gamepad_id < 0: return [0, 0, 0]
-    ret, info = joyGetPosEx(gamepad_id)
-    if not ret: return [0.0, 0.0, 0.0]
-    r, u, v = (info.dwRpos - 32678)/32768.0, (info.dwUpos - 32678)/32768.0, (info.dwVpos - 32678)/32768.0
-    return (r, u, v)
+    def is_initialized(self):
+        ''' Returns True if the joystick is known to the system
+        weither or not it is connected.  The joystick must be
+        known for the other get functions to be valid.'''
+        return self._is_inited
     
-JOYERR_NOERROR = 0
-JOY_RETURNX = 0x00000001
-JOY_RETURNY = 0x00000002
-JOY_RETURNZ = 0x00000004
-JOY_RETURNR = 0x00000008
-JOY_RETURNU = 0x00000010
-JOY_RETURNV = 0x00000020
-JOY_RETURNPOV = 0x00000040
-JOY_RETURNBUTTONS = 0x00000080
-JOY_RETURNRAWDATA = 0x00000100
-JOY_RETURNPOVCTS = 0x00000200
-JOY_RETURNCENTERED = 0x00000400
-JOY_USEDEADZONE = 0x00000800
-JOY_RETURNALL = (JOY_RETURNX | JOY_RETURNY | JOY_RETURNZ | \
-                 JOY_RETURNR | JOY_RETURNU | JOY_RETURNV | \
-                 JOY_RETURNPOV | JOY_RETURNBUTTONS)
+    def is_connected(self):
+        ''' Returns true if the joystick seems to be connected. '''
+        self.get_axis()
+        return self._isconnected
 
-# joystickapi - JOYCAPS
-class JOYCAPS:
-    SIZE_W = 728
-    OFFSET_V = 4 + 32*2
-    def __init__(self, buffer):
-        ushort_array = (ctypes.c_uint16 * 2).from_buffer(buffer)
-        self.wMid, self.wPid = ushort_array  
+    def get_id(self): 
+        ''' Returns the system id for device. '''
+        return self._id
 
-        wchar_array = (ctypes.c_wchar * 32).from_buffer(buffer, 4)
-        self.szPname = ctypes.cast(wchar_array, ctypes.c_wchar_p).value
+    def get_name(self):
+        ''' Returns the system name for the device.  If the
+        joystick is not connected, or there is some other
+        error, a blank string is returned.'''
+        if not self._is_inited: self.reset()
+        return self._name
 
-        uint_array = (ctypes.c_uint32 * 19).from_buffer(buffer, JOYCAPS.OFFSET_V) 
-        self.wXmin, self.wXmax, self.wYmin, self.wYmax, self.wZmin, self.wZmax, \
-        self.wNumButtons, self.wPeriodMin, self.wPeriodMax, \
-        self.wRmin, self.wRmax, self.wUmin, self.wUmax, self.wVmin, self.wVmax, \
-        self.wCaps, self.wMaxAxes, self.wNumAxes, self.wMaxButtons = uint_array
+    def get_midpid(self):
+        ''' Returns a tuple of the device's MID and PID. See
+        comments above for more explaniation. '''
+        if not self._is_inited: self.reset()
+        return self._midpid
 
+    def get_style(self):
+        ''' Returns a style designator for the device, if known.'''
+        if not self._is_inited: self.reset()
+        for midpid, style, _ in known_devices:
+            if midpid == self._midpid: return style
+        return "Unknown"
 
-# joystickapi - JOYINFOEX
-class JOYINFOEX:
-  SIZE = 52
-  def __init__(self, buffer): 
+    def get_description(self):
+        ''' Returns a description of the device, if known.'''
+        if not self._is_inited: self.reset()
+        for midpid, _, desc in known_devices:
+            if midpid == self._midpid: return desc
+        return "(blank)"
 
-      uint_array = (ctypes.c_uint32 * (JOYINFOEX.SIZE // 4)).from_buffer(buffer) 
-      self.dwSize, self.dwFlags, \
-      self.dwXpos, self.dwYpos, self.dwZpos, self.dwRpos, self.dwUpos, self.dwVpos, \
-      self.dwButtons, self.dwButtonNumber, self.dwPOV, self.dwReserved1, self.dwReserved2 = uint_array
+    def get_number_of_buttons(self):
+        ''' Returns the number of known buttons on the connected
+        joystick.  If the joystick is not initialized, or there is
+        some other error, zero is returned.'''
+        if not self._is_inited: self.reset()
+        return self._numbtns
 
+    def get_number_of_axes(self):
+        ''' Returns the number of known axes on the connected
+        joystick.  If the joystick is not initalized, or there is
+        some other error, zero is returned.'''
+        if not self._is_inited: self.reset()
+        return self._numaxis
+    
+    def get_buttons(self):
+        ''' Returns a list of at least 12 booleans that indicate 
+        the state of the buttons on the joystick.  If the joystick
+        is not connected, or there is an error -- False for each
+        button is returned.'''
+        if not self._is_inited: self.reset()
+        if not self._is_inited:
+            return [False for i in range(12)]
+        okay, info = js.joyGetPosEx(self._id)
+        if not okay:
+            self._isconnected = False
+            return [False for i in range(12)]
+        self._isconnected = True
+        btns = [(1<<i) & info.dwButtons != 0 for i in range(self._numbtns)]
+        if len(btns) < 12:
+            n = 12 - len(btns)
+            for _ in range(n): btns.append(False)
+        return btns
+    
+    def get_axis(self):
+        ''' Returns a list of three floats (-1 to +1) describing the joystick's XYZ axis.
+        If there is an error or the joystick is not connected, zeros are returned. '''
+        if not self._is_inited: self.reset()
+        if not self._is_inited: 
+            return [0, 0, 0]
+        okay, info = js.joyGetPosEx(self._id)
+        if not okay:
+            self._isconnected = False
+            return [0.0, 0.0, 0.0]
+        self._isconnected = True
+        x,y,z = (info.dwXpos - 32678)/32768.0, (info.dwYpos - 32678)/32768.0, (info.dwZpos - 32678)/32768.0
+        x,y,z = -x, -y, -z  
+        return (x, y, z)
+
+    def get_ruv(self):
+        ''' Returns a list of three floats (-1 to +1) describing the joystick's rotational axis.
+        For Logitech this is the second set of axis.  If there is an error, or the joystick is
+        not connected, zeros are returned. '''
+        if not self._is_inited: self.reset()
+        if not self._is_inited: 
+            return [0, 0, 0]
+        okay, info = js.joyGetPosEx(self._id)
+        if not okay: 
+            self._isconnected = False
+            return [0.0, 0.0, 0.0]
+        r, u, v = (info.dwRpos - 32678)/32768.0, (info.dwUpos - 32678)/32768.0, (info.dwVpos - 32678)/32768.0
+        return (r, u, v)

@@ -41,6 +41,7 @@ class GameClockWidget(tk.Frame):
         self.after(50, self._updater)
 
     def get_size(self):
+        ''' Returns the desired size for this widget. '''
         return desiredsize
 
     def _updater(self):

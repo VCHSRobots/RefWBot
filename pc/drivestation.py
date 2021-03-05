@@ -7,13 +7,15 @@ import tkinter.font as tkFont
 import mqttinterface as mi 
 import gameclockwidget
 import joystickwidget
+import hardwarestatuswidget
+import commstatuswidget
 import joystick
 import threading
 import time
 
 title = "EPIC ROBOTZ"
 teamname = "Reference Bot"
-wx, wy = 300, 800
+wx, wy = 300, 850
 
 class DriveStation(tk.Frame):
 
@@ -31,8 +33,10 @@ class DriveStation(tk.Frame):
         self.namefont = tkFont.Font(family="Copperplate Gothic Light", size=20)
         self.titlelabel = tk.Label(self, text=title, anchor="center", font=self.titlefont)
         self.namelabel = tk.Label(self, text=teamname, anchor="center", font=self.namefont)
+        self.hwstatus = hardwarestatuswidget.HardwareStatusWidget(self)
         self.gameclock = gameclockwidget.GameClockWidget(self)
         self.joystick_ui = joystickwidget.JoystickWidget(self)
+        self.commstatus = commstatuswidget.CommStatusWidget(self)
 
         # Layout, do it manually to get exactly what we want.
         y = 5
@@ -40,12 +44,19 @@ class DriveStation(tk.Frame):
         y += 30
         self.namelabel.place(x=0, y=y, width=wx, height=30)
         y += 40
+        w, h = self.hwstatus.get_size()
+        self.hwstatus.place(x=int((wx-w)/2), y=y, width=w, height=h)
+        y += h + 10
         w, h = self.gameclock.get_size()
         self.gameclock.place(x=int((wx-w)/2), y=y, width=w, height=h)
         y += h + 10
         w, h = self.joystick_ui.get_size()
         self.joystick_ui.place(x=int((wx-w)/2), y=y, width=w, height=h)
         y += h + 10
+        w, h = self.commstatus.get_size()
+        self.commstatus.place(x=int((wx-w)/2), y=y, width=w, height=h)  
+        y += h + 10
+
         self.quitbackgroundtasks = False
         self.bg_count = 0
         self.last_btns = []
@@ -54,14 +65,25 @@ class DriveStation(tk.Frame):
       
     def background_joystick(self):
         while True:
+            # Below is temp for dev...
+            self.commstatus.set_field("Status", "UnConnected")
+            self.commstatus.set_field("Msg Tx", "459")
+            self.commstatus.set_field("Msg Rx", "219")
+            self.commstatus.set_field("Ping", "34 ms")
+            self.commstatus.set_field("Lst Msg", "23 sec")
+            self.commstatus.set_field("Errors", "0")
+
+            # Good code continues here
             btns = self.joystick_device.get_buttons()
             xyz = self.joystick_device.get_axis()
             ruv = self.joystick_device.get_ruv()
             haveconnection = self.joystick_device.is_connected()
             if haveconnection: 
                 self.joystick_ui.set_mode('active')
+                self.hwstatus.set_status("Joystick", "#62EB3C")
             else: 
                 self.joystick_ui.set_mode('invalid')
+                self.hwstatus.set_status("Joystick", "red")
             self.joystick_ui.set_axis(*xyz)
             self.joystick_ui.set_ruv(*ruv)
             self.joystick_ui.set_buttons(*btns)
@@ -109,7 +131,7 @@ if __name__ == "__main__":
 
     root = tk.Tk()
     root.title("Driver Station for Water Bot")
-    root.geometry('300x900')
+    root.geometry("%dx%d" % (wx, wy))
     ds = DriveStation(root, enable_mqtt=enable_mqtt)
     ds.place(x=0, y=0, relwidth=1, relheight=1)
     ds.start_background()

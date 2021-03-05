@@ -82,12 +82,14 @@ class JoystickWidget(tk.Frame):
         self._lastaxis = None
         self._lastruv = None
         self._lastbtns = None
+        self._lastmode = ''
 
         self._showaxes()
         self._showbtns()
         self._showruv()
   
     def get_size(self):
+        ''' Returns the desired size for this widget. '''
         return desiredsize
 
     def set_mode(self, mode):
@@ -96,6 +98,8 @@ class JoystickWidget(tk.Frame):
         background is turned to yellow, and the words "Joystick Not Found"
         are shown at the bottom.  However, the diagrams continue to work
         as normal.'''
+        if mode == self._lastmode: return
+        self._lastmode = mode
         if mode == 'active':
             self._canvas.itemconfig(self._background, fill="", outline="")
             self.set_statustext(text="Joystick", color="black")
