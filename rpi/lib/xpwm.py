@@ -86,11 +86,15 @@ def board_init(masterfreq = default_masterfreq):
     set_frequency(50, masterfreq=masterfreq)
     pwm_inited = True 
 
-def set_servo(chan, rotation):
-    ''' Set servo rotation from 0 (lowest angle) to 1 (highest angle).
-         
-         Note: Some servos will not respond to extream settings. '''
-    usec = 750 + rotation * 1500
+def set_servo(chan, rotation, minpw=800, maxpw=2200):
+    ''' Set servo rotation from -1 (lowest angle) to 1 (highest angle).
+    You can control the extreme settings with minpw, maxpw.'''
+    span = int(maxpw - minpw)
+    center = int(minpw + span/2)
+    move = int(rotation * (span / 2))
+    usec = center + move
+    if usec > maxpw: usec = maxpw 
+    if usec < minpw: usec = minpw
     set_pwm(chan, usec)
  
 def killall():

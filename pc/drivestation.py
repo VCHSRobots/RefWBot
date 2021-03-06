@@ -4,7 +4,7 @@
 import sys
 import tkinter as tk
 import tkinter.font as tkFont
-import mqttinterface as mi 
+import mqttrobot
 import gameclockwidget
 import joystickwidget
 import hardwarestatuswidget
@@ -12,6 +12,7 @@ import commstatuswidget
 import joystick
 import threading
 import time
+from utils import *
 
 title = "EPIC ROBOTZ"
 teamname = "Reference Bot"
@@ -25,10 +26,11 @@ class DriveStation(tk.Frame):
         tk.Frame.__init__(self, parent)
         
         # Hardware setup
-        if enable_mqtt: self.mqtt = mi.MqttInterface()
+        if enable_mqtt: self.mqtt = mqttrobot.MqttRobot()
         else: self.mqtt = None
         # self.joystick_device = joystick.Joystick(style="Logitech 3D")
         self.joystick_device = joystick.Joystick(style="Noname Gamepad")
+        self.ping_setup()
 
         # GUI setup
         self.titlefont = tkFont.Font(family="Copperplate Gothic Bold", size=24)
@@ -74,12 +76,56 @@ class DriveStation(tk.Frame):
             self.commstatus.set_field("Lst Msg", "-- sec")
             self.commstatus.set_field("Errors", "0")  
             self.hwstatus.set_status("Comm", "red")
+
+    def ping_setup(self):
+        ''' Sets up the variables for the ping test. '''
+        self.ping_time_of_last_test = 0
+        self.ping_count = 0
+        self.ping_last_data = ""
+        self.ping_last_timestamp = 0
+        self.ping_inflight = False
+        self.ping_report = "---"
+        self.ping_rec_cnt = 0
+        self.ping_err_cnt = 0
+        if self.mqtt:
+          self.mqtt.register_topic("WBot/PingDS", self.on_ping)
         
+    def ping_test(self):
+        ''' Conducts the background ping test once per second. '''
+        timenow = time.monotonic()
+        if timenow - self.ping_time_of_last_test < 1.0: return
+        if self.ping_inflight:
+          if timenow - self.ping_time_of_last_test > 10.0:
+            self.ping_err_cnt += 1
+            self.ping_inflight = False
+        if self.ping_inflight: return 
+        self.ping_time_of_last_test = timenow
+        self.ping_count += 1
+        self.ping_last_data = "%06d" % self.ping_count
+        self.ping_last_timestamp = timenow
+        self.ping_inflight = True
+        self.mqtt.publish("WBot/PingBot", self.ping_last_data)
+
+    def on_ping(self, topic, data):
+      self.ping_rec_cnt += 1
+      if data != self.ping_last_data: return
+      if not self.ping_inflight: return
+      delay = time.monotonic() - self.ping_last_timestamp
+      self.ping_inflight = False 
+      ms = int(delay * 1000)
+      if ms < 999:
+        self.ping_report = "%d ms" % ms
+      elif ms < 99999:
+        sec = int(ms / 1000)
+        self.ping_report = "%d secs" % sec 
+      else:
+        self.ping_report = ">99 secs"
 
     def monitor_mqtt(self):
         ''' Monitors activity of mqtt, and reports it to the ui. '''
         if self.mqtt == None: return
         if self.mqtt.is_connected():
+          self.ping_test()
           self.hwstatus.set_status("Comm", nicegreen)
           self.commstatus.set_field("Status", "Connected")
         else:
@@ -96,11 +142,11 @@ class DriveStation(tk.Frame):
         if counts["rx"] <= 0: mt= '--'
         self.commstatus.set_field("Msg Tx", "%d" % counts["tx"])
         self.commstatus.set_field("Msg Rx", "%d" % counts["rx"])
-        self.commstatus.set_field("Ping", "-- ms")
-        self.commstatus.set_field("Lst Msg", mt)
+        self.commstatus.set_field("Ping", self.ping_report)
+        self.commstatus.set_field("Lst Msg", smt)
         self.commstatus.set_field("Errors", "%d" % counts["err"])
 
-    def background_joystick(self):
+    def background_run(self):
         ''' Runs in the background, doing the main activity: sending
         joystick inputs to the pi, and keeping the ui up to date. '''
         while True:
@@ -129,23 +175,27 @@ class DriveStation(tk.Frame):
                         if i: s += "T " 
                         else: s += "F "
                     self.mqtt.publish("WBot/Joystick/Buttons", s)
-                if self.last_xyz != xyz:
+                    #print("Publishing Buttons = %s" % s)
+                if not same_in_tolerance(xyz, self.last_xyz):
                     self.last_xyz = xyz
                     s = "%7.4f %7.4f %7.4f" % tuple(xyz)
                     self.mqtt.publish("WBot/Joystick/xyz", s)
-                if self.last_ruv != ruv:
+                    #print("Publishing xyz = %s" % s)
+                if not same_in_tolerance(ruv, self.last_ruv):
                     self.last_ruv = ruv
                     s = "%7.4f %7.4f %7.4f" % tuple(ruv)
-                    self.mqtt.publish("WBot/Joystick/ruv", s)
+                    #Off due to broken input...
+                    #self.mqtt.publish("WBot/Joystick/ruv", s)
+                    #print("Publishing ruv = %s " %s )
             self.bg_count += 1
             # if self.bg_count % 100 == 0: print("Background Loop: %d." % self.bg_count)
             if self.quitbackgroundtasks: 
               print("Quitting the joystick thread.")
               return
-            time.sleep(0.015)
+            time.sleep(0.050)
     
     def start_background(self):
-        self.bgid = threading.Thread(target=self.background_joystick, name="background-joystick")
+        self.bgid = threading.Thread(target=self.background_run, name="background-joystick")
         self.bgid.daemon = True  # KLUGH -- Should not need this!  Bug in the shutdown code for this program.
         self.bgid.start()
 

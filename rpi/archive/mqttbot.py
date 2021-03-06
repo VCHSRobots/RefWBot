@@ -13,7 +13,6 @@ import time
 default_broker_url = "10.0.5.1"
 default_broker_port = 1883
 
-
 class MqttBot():
 
     def __init__(self, broker_url=default_broker_url, broker_port=default_broker_port):
@@ -22,17 +21,18 @@ class MqttBot():
         self._client = mqtt.Client()
         self._client.on_connect = self._on_connect
         self._client.on_message = self._on_message
-        self._client.subscribe("WBot/Joystick/xyz", qos=1)
+        self._client.connect(self._broker_url, self._broker_port)
+        self._client.subscribe("WBot/PingBot", qos=1)
         self._last_connect_tme = 0
         self._last_rx_time = 0
         self._last_tx_time = 0
         self._rx_msg_count = 0
         self._tx_msg_count = 0
+        self._ping_count = 0
         self._connect_count = 0
         self._err_count = 0
         self._topics = {}  # keywords=topic, value = tuple of (data, timestamp, callback)
-        self._client.connect(self._broker_url, self._broker_port, keepalive=20)
-        self._client.loop_forever()
+        self._client.loop_start()
 
     def _on_connect(self, client, userdata, flags, rc):
         ''' Called by the MQTT driver when a connection is made
@@ -46,27 +46,30 @@ class MqttBot():
         ''' Called by the MQTT driver when a message is received. '''
         self._last_rx_time = time.monotonic()
         self._rx_msg_count += 1
-        print("here. msg topic: %s" % message.topic)
         topic = message.topic
         data = message.payload.decode()
+        if topic == "WBot/PingBot":
+          print("got ping")
+          self.publish("WBot/PingDS", data)
+          self._ping_count += 1
         if topic not in self._topics: return
         _, _, cb = self._topics[topic]
-        timenow = time.monotinic()
+        timenow = time.monotonic()
         self._topics[topic] = (data, timenow, cb)
         if cb != None:
           cb(topic, data)
   
     def get_data(self, topic):
-      ''' Returns the data for a given topic. The return
-      info is a tuple: okayflag, data, timestamp, where
-      the okayflag is True if the data is avaliable.  The
-      data is always a string.  The timestamp is the 
-      time.monotinic() at the actual time the data was
-      received. '''
-      if topic not in self._topics: 
-          return False, "", 0
-      v, tme, _ = self._topics[topic]
-      return True, v, tme
+        ''' Returns the data for a given topic. The return
+        info is a tuple: okayflag, data, timestamp, where
+        the okayflag is True if the data is avaliable.  The
+        data is always a string.  The timestamp is the 
+        time.monotinic() at the actual time the data was
+        received. '''
+        if topic not in self._topics: 
+            return False, "", 0
+        v, tme, _ = self._topics[topic]
+        return True, v, tme
 
     def is_connected(self):
         ''' Returns true if the MQTT client is connected. '''
@@ -94,7 +97,6 @@ class MqttBot():
           self._topics[topic] = ("", 0, callback)
           return
         self._topics[topic] = ("", 0, callback)
-        print("reg topic %s" % topic)
         self._client.subscribe(topic, qos=1)
     
     def publish(self, topic, data):
@@ -112,3 +114,33 @@ class MqttBot():
         ''' Causes the connection to shut down.  Do not use
         this object after calling close(). '''
         self._client.loop_stop()
+
+    def get_3_floats(self, topic):
+        ''' Decodes three floats from MQTT topic. Returns:
+        okay_flag, f1, f2, f3. '''
+        okay, s, _ = self.get_data(topic)
+        if not okay:
+          return False, 0, 0, 0
+        slist = s.split() 
+        if len(slist) != 3:
+          return False, 0, 0, 0
+        try:
+          x, y, z = float(slist[0]), float(slist[1]), float(slist[2])
+        except:
+          return False, 0, 0, 0
+        return True, x, y, z
+
+    def get_12_bools(self, topic):
+        ''' Decodes 12 booleans from MQTT topic. Returns:
+        okay_flag, vals, where vals is a list of 12 booleans. '''
+        okay, s, _ = self.get_data(topic)
+        if not okay:
+          return False, [False for _ in range(12)]
+        slist = s.split()
+        if len(slist) != 12:
+          return False, [False for _ in range(12)]
+        btns = []
+        for s in slist:
+          if s == "T": btns.append(True)
+          else: btns.append(False)
+        return True, btns
