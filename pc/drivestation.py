@@ -17,6 +17,8 @@ title = "EPIC ROBOTZ"
 teamname = "Reference Bot"
 wx, wy = 300, 850
 
+nicegreen = "#62EB3C"
+
 class DriveStation(tk.Frame):
 
     def __init__(self, parent, enable_mqtt=True):
@@ -62,18 +64,48 @@ class DriveStation(tk.Frame):
         self.last_btns = []
         self.last_xyz = []
         self.last_ruv = []
-      
-    def background_joystick(self):
-        while True:
-            # Below is temp for dev...
-            self.commstatus.set_field("Status", "UnConnected")
-            self.commstatus.set_field("Msg Tx", "459")
-            self.commstatus.set_field("Msg Rx", "219")
-            self.commstatus.set_field("Ping", "34 ms")
-            self.commstatus.set_field("Lst Msg", "23 sec")
-            self.commstatus.set_field("Errors", "0")
 
+        # Do this once here to avoid stupid updates in the background loop
+        if self.mqtt == None:
+            self.commstatus.set_field("Status", "Disabled")
+            self.commstatus.set_field("Msg Tx", "0")
+            self.commstatus.set_field("Msg Rx", "0")
+            self.commstatus.set_field("Ping", "--- ms")
+            self.commstatus.set_field("Lst Msg", "-- sec")
+            self.commstatus.set_field("Errors", "0")  
+            self.hwstatus.set_status("Comm", "red")
+        
+
+    def monitor_mqtt(self):
+        ''' Monitors activity of mqtt, and reports it to the ui. '''
+        if self.mqtt == None: return
+        if self.mqtt.is_connected():
+          self.hwstatus.set_status("Comm", nicegreen)
+          self.commstatus.set_field("Status", "Connected")
+        else:
+          self.hwstatus.set_status("Comm", "red")
+          self.commstatus.set_field("Status", "Comm Err")
+        counts = self.mqtt.get_counts()
+        mt = int(self.mqtt.time_since_last_rx() * 1000)
+        if mt < 999:
+          smt = "%d ms" % mt
+        else:
+          mt = int(mt / 1000)
+          if mt > 999: mt = 999
+          smt = "%d sec" % mt
+        if counts["rx"] <= 0: mt= '--'
+        self.commstatus.set_field("Msg Tx", "%d" % counts["tx"])
+        self.commstatus.set_field("Msg Rx", "%d" % counts["rx"])
+        self.commstatus.set_field("Ping", "-- ms")
+        self.commstatus.set_field("Lst Msg", mt)
+        self.commstatus.set_field("Errors", "%d" % counts["err"])
+
+    def background_joystick(self):
+        ''' Runs in the background, doing the main activity: sending
+        joystick inputs to the pi, and keeping the ui up to date. '''
+        while True:
             # Good code continues here
+            self.monitor_mqtt()
             btns = self.joystick_device.get_buttons()
             xyz = self.joystick_device.get_axis()
             ruv = self.joystick_device.get_ruv()
