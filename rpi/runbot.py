@@ -14,9 +14,14 @@ class WaterBot():
       self.mqtt.register_topic("WBot/Joystick/xyz")
       self.mqtt.register_topic("WBot/Joystick/ruv")
       self.mqtt.register_topic("WBot/PingBot", self.on_ping)
-      xpwm.board_init()
-      xpwm.killall()
-      self.arduino_okay = arduino.init()
+      self.hwokay = True
+      try:
+        xpwm.board_init()
+        xpwm.killall()
+        self.arduino_okay = arduino.init()
+      except:
+        self.hwokay = False
+      self.arduino_okay = False
       self.last_report_time = time.monotonic() - 5.0
       self.xyz = (0.0, 0.0, 0.0)
       self.ruv = (0.0, 0.0, 0.0)
@@ -58,7 +63,9 @@ class WaterBot():
   def control_bot(self):
     ''' Control code goes here. '''
     _, y, z = self.xyz
-    xpwm.set_servo(15, y)
+    #xpwm.set_servo(15, y)
+    if z < 0.0: z = 0.0
+    #arduino.set_pwm("PWM10", z)
 
   def run(self):
     ''' Main loop for water bot '''
