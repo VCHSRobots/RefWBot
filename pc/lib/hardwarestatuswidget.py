@@ -3,21 +3,23 @@
 
 import tkinter as tk  
 import tkinter.font as tkFont
+import dscolors
 
 # Constants to control the layout of the diagram:
-desiredsize = (250, 100) # desired size of widget for placing
-horz_px, vert_px = 210, 95 # size of canvas
+desiredsize = (250, 85) # desired size of widget for placing
+horz_px, vert_px = 210, 85 # size of canvas
 boxsize = (25, 15) # size of the rect box for the lights
 boxpad = 10
-boxes = ((10, 0, "Joystick"), (10, 25, "Comm"), (10, 50, "Battery"))
+boxes = ((2, 0, "Joystick"), (2, 25, "Comm"), (2, 50, "Code"),
+         (125, 0, "Bat L"), (125, 25, "Bat M"))
 linewidth = 2
 
 class HardwareStatusWidget(tk.Frame):
     def __init__(self, parent):
-        tk.Frame.__init__(self, parent, borderwidth=2, relief="groove", bg="lightgray")
+        tk.Frame.__init__(self, parent, borderwidth=2, relief="groove", bg=dscolors.widget_bg)
         self._canvas = tk.Canvas(self, width=horz_px, height=vert_px, borderwidth=0,
-            highlightthickness=0, background="lightgray")
-        self._canvas.pack(padx=10, pady=10)
+            highlightthickness=0, background=dscolors.widget_bg)
+        self._canvas.pack(padx=2, pady=5)
         self._font = tkFont.Font(family="Lucida Grande", weight="bold", size=12)
         self._boxes = []
         for x, y, name in boxes:

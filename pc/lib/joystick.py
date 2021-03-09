@@ -65,8 +65,13 @@ class Joystick():
         self._style = style
         self._desired_midpid = (0, 0)
         if self._style != "":
+            found = False
             for midpid, n, _ in known_devices:
-                if self._style == n: self._desired_midpid = midpid
+                if self._style == n: 
+                    self._desired_midpid = midpid
+                    found = True
+            if not found:
+                raise ValueError("Unknown Joystick Style: %s" % self._style)
         self._name = ""
         self._numaxis = 0
         self._numbtns = 0
@@ -82,6 +87,7 @@ class Joystick():
                 if (mid, pid) == self._desired_midpid:
                     self._id = i
                     return
+            return
         if len(joylist) > 0:
             self._id = joylist[0][0]
         

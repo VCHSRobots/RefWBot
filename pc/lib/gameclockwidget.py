@@ -3,6 +3,7 @@
 
 import tkinter as tk
 import tkinter.font as tkFont
+import dscolors  
 import time
 
 GAMEMODE_Ready = 0
@@ -10,25 +11,27 @@ GAMEMODE_Auto = 1
 GAMEMODE_Teleop = 2
 GAMEMODE_Stopped = 3
 
+bot_cmd = {GAMEMODE_Auto: "AUTO", GAMEMODE_Teleop: "TELEOP", GAMEMODE_Ready: "STOP", GAMEMODE_Stopped: "STOP"}
+
 game_telesecs = 240
 game_autosecs = 30
 game_warnsecs = 15
 
-desiredsize = (250, 210)  # desired size of widget for placing.
+desiredsize = (250, 150)  # desired size of widget for placing.
 
 class GameClockWidget(tk.Frame):
 
     def __init__(self, parent):
-        tk.Frame.__init__(self, parent, borderwidth=2, relief="groove")
-        self._bigfont = tkFont.Font(family="Lucida Grande", size=50)
-        self._btnfont = tkFont.Font(family="Lucida Grande", size=20)
-        self._modefont = tkFont.Font(family="Lucida Grande", size=20, weight="bold")
+        tk.Frame.__init__(self, parent, borderwidth=2, relief="groove", background=dscolors.widget_bg)
+        self._bigfont = tkFont.Font(family="Lucida Grande", size=40)
+        self._btnfont = tkFont.Font(family="Lucida Grande", size=16)
+        self._modefont = tkFont.Font(family="Lucida Grande", size=16, weight="bold")
         self._modelabel = tk.Label(self, text="Standby", anchor="center", font=self._modefont)
         self._clocklabel = tk.Label(self, text="4:00", anchor="center", font=self._bigfont)
         self._mainbutton = tk.Button(self, text="Start Match", font=self._btnfont, 
-            width=10, bg="darkgray", command=self._switch_mode)
-        self._modelabel.pack(side="top", fill="x", padx=10, pady=5)
-        self._clocklabel.pack(side="top", fill="x", padx=10, pady=5)
+            width=10, bg=dscolors.button_bg, command=self._switch_mode)
+        self._modelabel.pack(side="top", fill="x", padx=10, pady=0)
+        self._clocklabel.pack(side="top", fill="x", padx=10, pady=0)
         self._mainbutton.pack(side="top", fill="x", padx=10)
         self._current_modenum = 0
         self._clockrunning = False
@@ -130,5 +133,26 @@ class GameClockWidget(tk.Frame):
     def clock_value(self):
         ''' Returns the game clock's value in seconds to go. '''
         return self._clockcurrentvalue
+
+    def get_mode(self):
+        ''' Returns the current mode as one of the GAMEMODE_xxx integer constants.'''
+        return self._current_modenum
+
+    def get_botcmd(self):
+        ''' Returns a (cmd, time_to_go) tuple suitable for commanding the robot. 
+        The cmd will be one of "STOP", "TELEOP", "AUTO", and time_to_go will be the
+        number of seconds remaining in that mode, or 0 for STOP. '''
+        mode = bot_cmd[self._current_modenum]
+        if self._current_modenum == GAMEMODE_Ready or self._current_modenum == GAMEMODE_Stopped:
+            return (mode, 0)
+        secs_used = time.monotonic() - self._clock0  # Work in floating point, unlike the display clock
+        secs_to_go = self._clockvalue - secs_used
+        if self._current_modenum == GAMEMODE_Auto:
+            n = game_autosecs - secs_used
+            if n < 0: n = 0
+            return (mode, n)
+        else:
+            if secs_to_go < 0: secs_to_go = 0
+            return(mode, secs_to_go)   
 
 

@@ -4,14 +4,15 @@
 import tkinter as tk
 import tkinter.font as tkFont
 import math
+import dscolors
 
 # Constants to control the layout of the diagram:
-desiredsize = (250, 230) # desired size of widget for placing
+desiredsize = (250, 200) # desired size of widget for placing
 horz_px = 210 # horzontal size of the the widget in pixels
 vert_px = 210 # vertial size of the widget in pixels
-blockout = (0, 0, 200, 180) # block out rect for invalid flag
+blockout = (0, 0, 200, 200) # block out rect for invalid flag
 xorg = 100 # x orgin of the complete diagram. which is center of main cross bars.
-yorg = 100 # y orgin of the complete diagram, which is center of main cross bars.
+yorg = 88 # y orgin of the complete diagram, which is center of main cross bars.
 xytwist = (-80, 30, 50) # loc of arc center and size for twist diagram
 zbar = (50, 30, 50, 10) # loc, len, width of z slider diagram
 textloc = (0, 90) # center loc of the status text
@@ -25,10 +26,11 @@ btnrectslocs=((-4, -88), (-25, -75), (16, -65), (26, -65), (16, -75), (26, -75),
 
 class JoystickWidget(tk.Frame):
     def __init__(self, parent):
-        tk.Frame.__init__(self, parent, borderwidth=2, relief="groove", bg="white")
+        tk.Frame.__init__(self, parent, borderwidth=2, relief
+        ="groove", bg=dscolors.widget_bg)
         self._canvas = tk.Canvas(self, width=horz_px, height=vert_px, borderwidth=0,
-            highlightthickness=0, background='white')
-        self._canvas.pack(padx=10, pady=10)
+            highlightthickness=0, background=dscolors.widget_bg)
+        self._canvas.pack(padx=4, pady=4)
         self._background = self._canvas.create_rectangle(*blockout, fill="", outline="")
         rawpoints = [(-barwidth2, barwidth2),
             (-barwidth2, barwidth2), (-barwidth2, barlen2), (barwidth2, barlen2),
@@ -37,27 +39,27 @@ class JoystickWidget(tk.Frame):
             (-barwidth2, -barwidth2), (-barlen2, -barwidth2), (-barlen2, barwidth2),
             (-barwidth2, barwidth2)]
         relpoints = [(x+xorg, y+yorg) for x,y in rawpoints]       
-        self._canvas.create_polygon(relpoints, outline="blue", fill="lightgrey", width=linewidth)
+        self._canvas.create_polygon(relpoints, outline="blue", fill=dscolors.indicator_bg, width=linewidth)
         self._xdir = self._canvas.create_rectangle(xorg-linewidth, yorg+(barwidth2-linewidth),
-            xorg+linewidth, yorg-(barwidth2-linewidth), fill="red", outline="red")
+            xorg+linewidth, yorg-(barwidth2-linewidth), fill=dscolors.indicator_fg, outline=dscolors.indicator_fg)
         self._ydir = self._canvas.create_rectangle(xorg-(barwidth2-linewidth), yorg-linewidth,
-            xorg+(barwidth2-linewidth), yorg+linewidth, fill="red", outline="red")
+            xorg+(barwidth2-linewidth), yorg+linewidth, fill=dscolors.indicator_fg, outline=dscolors.indicator_fg)
         self._dot = self._canvas.create_oval(xorg-(barwidth2-linewidth), yorg-(barwidth2-linewidth),
-            xorg+(barwidth2-linewidth), yorg+(barwidth2-linewidth), fill="red", outline="red")
+            xorg+(barwidth2-linewidth), yorg+(barwidth2-linewidth), fill=dscolors.indicator_fg, outline=dscolors.indicator_fg)
         self._btnrecs = []
         for x, y in btnrectslocs: 
             x0, y0, x1, y1 = x+xorg, y+yorg, x+xorg+btnsz, y+yorg+btnsz
             b = self._canvas.create_rectangle(x0, y0, x1, y1,
-                outline="black", fill="lightgray", width=1)
+                outline="black", fill=dscolors.indicator_bg, width=1)
             self._btnrecs.append(b)
         xz, yz, sz = xytwist
         x0, y0, x1, y1 = xorg + xz, yorg + yz, xorg + xz + sz, yorg + yz + sz
         self._zaxis1 = self._canvas.create_arc(x0, y0, x1, y1, start=20, extent=140,
             style=tk.ARC, width=14, outline="blue")
         self._zaxis2 = self._canvas.create_arc(x0, y0, x1, y1, start=20, extent=140,
-            style=tk.ARC, width=10, outline="lightgray")
+            style=tk.ARC, width=10, outline=dscolors.indicator_bg)
         self._zaxis3 = self._canvas.create_arc(x0, y0, x1, y1, start=88, extent=2,
-            style=tk.ARC, width=10, outline="red")
+            style=tk.ARC, width=10, outline=dscolors.indicator_fg)
         xc, yc = xorg + xz + sz/2, yorg + yz + sz/2
         r1, r2 = sz/2 - 6, sz/2 + 6
         x0, y0 = int(xc - r1*math.sin(20)), int(yc - r1*math.cos(20))
@@ -69,9 +71,9 @@ class JoystickWidget(tk.Frame):
         x, y, h, w = zbar
         x0, y0, x1, y1 = xorg + x, yorg + y, xorg + x + w, yorg + y + h
         self._zbar = self._canvas.create_rectangle(x0, y0, x1, y1, outline="blue",
-                            fill="lightgray", width=linewidth)
+                            fill=dscolors.indicator_bg, width=linewidth)
         self._zdir = self._canvas.create_rectangle(x0+linewidth, y0+linewidth, 
-                    x1-linewidth, y1-linewidth, fill="red", outline="red")
+                    x1-linewidth, y1-linewidth, fill=dscolors.indicator_fg, outline=dscolors.indicator_fg)
         self._statusfont = self._bigfont = tkFont.Font(family="Lucida Grande", size=12)
         x, y = textloc
         self._status = self._canvas.create_text(x + xorg, y + yorg, text="Joystick",
@@ -101,10 +103,12 @@ class JoystickWidget(tk.Frame):
         if mode == self._lastmode: return
         self._lastmode = mode
         if mode == 'active':
-            self._canvas.itemconfig(self._background, fill="", outline="")
+            self._canvas.itemconfig(self._background, fill=dscolors.widget_bg, 
+                    outline=dscolors.widget_bg)
             self.set_statustext(text="Joystick", color="black")
         if mode == 'invalid':
-            self._canvas.itemconfig(self._background, fill="yellow", outline="yellow")
+            self._canvas.itemconfig(self._background, fill=dscolors.indicator_invalid_bg, 
+                    outline=dscolors.indicator_invalid_bg)
             self.set_statustext(text="Joystick Not Found", color="red")
 
     def set_axis(self, *args):
@@ -218,8 +222,8 @@ class JoystickWidget(tk.Frame):
         icnt = 0
         for r in self._btnrecs:
             if self._joybtns[icnt]:
-                self._canvas.itemconfig(r, fill="red")
+                self._canvas.itemconfig(r, fill=dscolors.indicator_fg)
             else:
-                self._canvas.itemconfig(r, fill="lightgray")
+                self._canvas.itemconfig(r, fill=dscolors.indicator_bg)
             icnt += 1
 

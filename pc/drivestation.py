@@ -9,6 +9,7 @@ import gameclockwidget
 import joystickwidget
 import hardwarestatuswidget
 import commstatuswidget
+import dscolors
 import joystick
 import threading
 import time
@@ -16,9 +17,7 @@ from utils import *
 
 title = "EPIC ROBOTZ"
 teamname = "Reference Bot"
-wx, wy = 300, 850
-
-nicegreen = "#62EB3C"
+wx, wy = 300, 750
 
 class DriveStation(tk.Frame):
 
@@ -26,11 +25,13 @@ class DriveStation(tk.Frame):
         tk.Frame.__init__(self, parent)
         
         # Hardware setup
-        if enable_mqtt: self.mqtt = mqttrobot.MqttRobot()
-        else: self.mqtt = None
-        # self.joystick_device = joystick.Joystick(style="Logitech 3D")
-        self.joystick_device = joystick.Joystick(style="Noname Gamepad")
+        self.setup_mqtt(enable_mqtt)
+        self.bot_status0 = self.bot_status1 = ("", 0)  # Last two bot status msg
+        self.joystick_device = joystick.Joystick(style="Logitech 3D")
+        # self.joystick_device = joystick.Joystick(style="Noname Gamepad")
         self.ping_setup()
+        self.last_cmd_send_time = time.monotonic() - 100.0
+        self.run_loop_cnt = 0
 
         # GUI setup
         self.titlefont = tkFont.Font(family="Copperplate Gothic Bold", size=24)
@@ -49,16 +50,17 @@ class DriveStation(tk.Frame):
         self.namelabel.place(x=0, y=y, width=wx, height=30)
         y += 40
         w, h = self.hwstatus.get_size()
-        self.hwstatus.place(x=int((wx-w)/2), y=y, width=w, height=h)
+        x = int((wx-w)/2)  # Use size of hwstatus to establish x margin for all widgets
+        self.hwstatus.place(x=x, y=y, width=w, height=h)
         y += h + 10
         w, h = self.gameclock.get_size()
-        self.gameclock.place(x=int((wx-w)/2), y=y, width=w, height=h)
+        self.gameclock.place(x=x, y=y, width=w, height=h)
         y += h + 10
         w, h = self.joystick_ui.get_size()
-        self.joystick_ui.place(x=int((wx-w)/2), y=y, width=w, height=h)
+        self.joystick_ui.place(x=x, y=y, width=w, height=h)
         y += h + 10
         w, h = self.commstatus.get_size()
-        self.commstatus.place(x=int((wx-w)/2), y=y, width=w, height=h)  
+        self.commstatus.place(x=x, y=y, width=w, height=h)  
         y += h + 10
 
         self.quitbackgroundtasks = False
@@ -77,6 +79,15 @@ class DriveStation(tk.Frame):
             self.commstatus.set_field("Errors", "0")  
             self.hwstatus.set_status("Comm", "red")
 
+    def setup_mqtt(self, enable):
+      ''' Do the setup for MQTT. '''
+      if not enable: 
+        self.mqtt = None
+        return
+      self.mqtt = mqttrobot.MqttRobot()
+      time.sleep(0.1)  # Found by experimenting!  Must have a delay here.
+      self.mqtt.register_topic("wbot/status", self.on_bot_status)
+
     def ping_setup(self):
         ''' Sets up the variables for the ping test. '''
         self.ping_time_of_last_test = 0
@@ -87,15 +98,16 @@ class DriveStation(tk.Frame):
         self.ping_report = "---"
         self.ping_rec_cnt = 0
         self.ping_err_cnt = 0
+        self.ping_last_complete_time = 0
         if self.mqtt:
-          self.mqtt.register_topic("WBot/PingDS", self.on_ping)
-        
+          self.mqtt.register_topic("wbot/pingds", self.on_ping)
+
     def ping_test(self):
         ''' Conducts the background ping test once per second. '''
         timenow = time.monotonic()
         if timenow - self.ping_time_of_last_test < 1.0: return
         if self.ping_inflight:
-          if timenow - self.ping_time_of_last_test > 10.0:
+          if timenow - self.ping_time_of_last_test > 5.0:
             self.ping_err_cnt += 1
             self.ping_inflight = False
         if self.ping_inflight: return 
@@ -104,9 +116,10 @@ class DriveStation(tk.Frame):
         self.ping_last_data = "%06d" % self.ping_count
         self.ping_last_timestamp = timenow
         self.ping_inflight = True
-        self.mqtt.publish("WBot/PingBot", self.ping_last_data)
+        self.mqtt.publish("wbot/pingbot", self.ping_last_data)
 
     def on_ping(self, topic, data):
+      self.ping_last_complete_time = time.monotonic()
       self.ping_rec_cnt += 1
       if data != self.ping_last_data: return
       if not self.ping_inflight: return
@@ -121,12 +134,16 @@ class DriveStation(tk.Frame):
       else:
         self.ping_report = ">99 secs"
 
+    def on_bot_status(self, topic, data):
+      self.bot_status0 = self.bot_status1
+      self.bot_status1 = data, time.monotonic()
+
     def monitor_mqtt(self):
         ''' Monitors activity of mqtt, and reports it to the ui. '''
         if self.mqtt == None: return
         if self.mqtt.is_connected():
           self.ping_test()
-          self.hwstatus.set_status("Comm", nicegreen)
+          self.hwstatus.set_status("Comm", dscolors.status_okay)
           self.commstatus.set_field("Status", "Connected")
         else:
           self.hwstatus.set_status("Comm", "red")
@@ -139,34 +156,68 @@ class DriveStation(tk.Frame):
           mt = int(mt / 1000)
           if mt > 999: mt = 999
           smt = "%d sec" % mt
-        if counts["rx"] <= 0: mt= '--'
+        if counts["rx"] <= 0: smt= '---'
+        spr = self.ping_report 
+        if time.monotonic() - self.ping_last_complete_time > 4.0: spr = "---"
         self.commstatus.set_field("Msg Tx", "%d" % counts["tx"])
         self.commstatus.set_field("Msg Rx", "%d" % counts["rx"])
-        self.commstatus.set_field("Ping", self.ping_report)
+        self.commstatus.set_field("Ping", spr)
         self.commstatus.set_field("Lst Msg", smt)
         self.commstatus.set_field("Errors", "%d" % counts["err"])
 
+    def monitor_botstatus(self):
+      d0, t0 = self.bot_status0
+      d1, t1 = self.bot_status1
+      try:
+        s0 = d0.split()[0]
+        s1 = d1.split()[0]
+      except: 
+        s0 = s1 = ""
+      if s0 != "okay" or s1 != "okay":
+        self.hwstatus.set_status("Code", dscolors.status_error)
+        return
+      timenow = time.monotonic()
+      if timenow - t0 > 10.0 or timenow - t1 > 9.0:
+        self.hwstatus.set_status("Code", dscolors.status_error)
+        return
+      if timenow - t0 > 3.0 or timenow - t1 > 2.5:
+        self.hwstatus.set_status("Code", dscolors.status_warn)
+        return
+      self.hwstatus.set_status("Code", dscolors.status_okay)
+
+    def send_loop_cmd(self):
+      ''' Sends loop command to bot if we have mqtt.  Send the
+      loop command once every 0.5 seconds. '''
+      if not self.mqtt: return
+      timenow = time.monotonic()
+      if timenow - self.last_cmd_send_time < 0.50: return
+      self.last_cmd_send_time = timenow 
+      cmdstr, tme_to_go = self.gameclock.get_botcmd()
+      s = ("%s %d %7.2f" % (cmdstr, self.run_loop_cnt, tme_to_go))
+      self.mqtt.publish("wbot/mode", s)
+      
     def background_run(self):
         ''' Runs in the background, doing the main activity: sending
         joystick inputs to the pi, and keeping the ui up to date. '''
         while True:
-            # Good code continues here
+            self.run_loop_cnt += 1
             self.monitor_mqtt()
+            self.monitor_botstatus()
             btns = self.joystick_device.get_buttons()
             xyz = self.joystick_device.get_axis()
             ruv = self.joystick_device.get_ruv()
             haveconnection = self.joystick_device.is_connected()
             if haveconnection: 
                 self.joystick_ui.set_mode('active')
-                self.hwstatus.set_status("Joystick", "#62EB3C")
+                self.hwstatus.set_status("Joystick", dscolors.status_okay)
             else: 
                 self.joystick_ui.set_mode('invalid')
-                self.hwstatus.set_status("Joystick", "red")
+                self.hwstatus.set_status("Joystick", dscolors.status_error)
             self.joystick_ui.set_axis(*xyz)
             self.joystick_ui.set_ruv(*ruv)
             self.joystick_ui.set_buttons(*btns)
-            #self.joystick.set_mode("invalid")
             if self.mqtt:
+                self.send_loop_cmd()
                 # send out joystick values to robot here...
                 if self.last_btns != btns:
                     self.last_btns = btns
@@ -174,18 +225,18 @@ class DriveStation(tk.Frame):
                     for i in btns:
                         if i: s += "T " 
                         else: s += "F "
-                    self.mqtt.publish("WBot/Joystick/Buttons", s)
+                    self.mqtt.publish("wbot/joystick/buttons", s)
                     #print("Publishing Buttons = %s" % s)
                 if not same_in_tolerance(xyz, self.last_xyz):
                     self.last_xyz = xyz
                     s = "%7.4f %7.4f %7.4f" % tuple(xyz)
-                    self.mqtt.publish("WBot/Joystick/xyz", s)
+                    self.mqtt.publish("wbot/joystick/xyz", s)
                     #print("Publishing xyz = %s" % s)
                 if not same_in_tolerance(ruv, self.last_ruv):
                     self.last_ruv = ruv
                     s = "%7.4f %7.4f %7.4f" % tuple(ruv)
                     #Off due to broken input...
-                    #self.mqtt.publish("WBot/Joystick/ruv", s)
+                    #self.mqtt.publish("wbot/joystick/ruv", s)
                     #print("Publishing ruv = %s " %s )
             self.bg_count += 1
             # if self.bg_count % 100 == 0: print("Background Loop: %d." % self.bg_count)

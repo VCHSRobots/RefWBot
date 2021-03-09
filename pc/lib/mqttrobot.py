@@ -22,7 +22,7 @@ class MqttRobot():
         self._client = mqtt.Client()
         self._client.on_connect = self._on_connect
         self._client.on_message = self._on_message
-        self._client.connect(self._broker_url, self._broker_port)
+        self._client.connect_async(self._broker_url, self._broker_port)
         self._last_connect_tme = 0
         self._last_rx_time = 0
         self._last_tx_time = 0
@@ -39,6 +39,10 @@ class MqttRobot():
         if rc == 0:
             self._connect_count += 1
             self._last_connect_tme = time.monotonic()
+            # We found by experiment that the subscription to the server only is valid when 
+            # the connection is active.  So refresh all subscriptions here.
+            for t in self._topics.keys():
+              self._client.subscribe(t, qos=1)
         else: self._err_count += 1
 
     def _on_message(self, client, userdata, message):
@@ -92,7 +96,8 @@ class MqttRobot():
           self._topics[topic] = ("", 0, callback)
           return
         self._topics[topic] = ("", 0, callback)
-        self._client.subscribe(topic, qos=1)
+        if self.is_connected():
+          self._client.subscribe(topic, qos=1)
 
     def register_ping_callback(self, callback):
         ''' Register a callback that is called upon receiving a ping message.'''

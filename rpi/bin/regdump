@@ -22,7 +22,7 @@ def print_analogs():
 	a3 = arduino.get_analog("A3")
 	a6 = arduino.get_analog("A6")
 	a7 = arduino.get_analog("A7")
-	print("Analog (A1, A2, A3, A6, A7) = %3d %3d %3d %3d %3d" % (a1, a2, a3, a6, a7))
+	print("Analog (A1, A2, A3, A6, A7) = %6.3f %6.3f %6.3f %6.3f %6.3f" % (a1, a2, a3, a6, a7))
 
 def print_digitals():
 	d = arduino.readreg(reg.SI)
