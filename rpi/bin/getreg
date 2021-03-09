@@ -3,17 +3,7 @@
 # EPIC Robotz, dlb, Feb 2021
 
 import sys
-from smbus import SMBus
-import arduino_reg_map as reg
-
-addr = 0x8 # bus address of ardunio
-bus = SMBus(1) # indicates /dev/ic2-1
-
-def writereg(regadr, dat):
-	bus.write_byte_data(addr, regadr, dat)
-
-def readreg(regadr):
-	return bus.read_byte_data(addr, regadr)
+import arduino_wb 
 
 def fmtbinary(x):
 	s = ""
@@ -23,11 +13,10 @@ def fmtbinary(x):
 		x = x << 1
 	return s
 
-
 if len(sys.argv) < 2:
 	i = 0
 	snames = ""
-	allnames = reg.get_names()
+	allnames = arduino_wb.get_reg_names()
 	for n in allnames:
 		if i % 6 == 0 and snames != "": snames += "\n"
 		snames += n + " "
@@ -40,7 +29,7 @@ if len(sys.argv) < 2:
 	sys.exit()
 
 regname = sys.argv[1]
-rnum = reg.name2adr(regname)
+rnum = arduino_wb.name2adr(regname)
 if rnum < 0:
 	# Maybe its a number.
 	try:
@@ -48,11 +37,12 @@ if rnum < 0:
 	except ValueError:
 		print("%s is not a known registor name." % regname)
 		sys.exit()
-	if rnum < 0 or rnum > reg.LAST:
-		print("Registor numbers must be between 0 and %d." % reg.LAST)
-		sys.exit()
+	if rnum < 0 or rnum > arduino_wb.LAST:
+		print("Registor numbers must be between 0 and %d." % arduino_wb.LAST)
+		sys.exit() 
 
-dd = readreg(rnum) 
-rname = reg.adr2name(rnum)
+a = arduino_wb.Arduino_wb()
+dd = a._readreg(rnum)
+rname = arduino_wb.adr2name(rnum)
 print("Reg %s [%d] = %d = 0x%02x  = [%s].\n" % (rname, rnum, dd, dd, fmtbinary(dd)))
 

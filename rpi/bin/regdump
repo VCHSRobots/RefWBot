@@ -3,34 +3,35 @@
 # EPIC Robotz, dlb, Feb 2021
 
 import sys
-import arduino
-import arduino_reg_map as reg
+import arduino_wb
 import time
 
+a = arduino_wb.Arduino_wb()
+
 def print_status():
-    id = arduino.get_version()
+    id = a.get_version()
     print("Device Id = %c" % id)
-    u0, u1, u2, u3 = arduino.get_timestamp_bytes()
-    tt = arduino.fourbytestolong(u3, u2, u1, u0)
+    u0, u1, u2, u3 = a.get_timestamp_bytes()
+    tt = a._fourbytestolong(u3, u2, u1, u0)
     print("Device Time = %d  (%02x %02x %02x %02x)" % (tt, u0, u1, u2, u3))
-    batv = arduino.get_battery_voltage()
+    batv = a.get_battery_voltage()
     print("Battery Voltage = %4.1f" % batv)
 
 def print_analogs():
-	a1 = arduino.get_analog("A1")
-	a2 = arduino.get_analog("A2")
-	a3 = arduino.get_analog("A3")
-	a6 = arduino.get_analog("A6")
-	a7 = arduino.get_analog("A7")
+	a1 = a.get_analog("A1")
+	a2 = a.get_analog("A2")
+	a3 = a.get_analog("A3")
+	a6 = a.get_analog("A6")
+	a7 = a.get_analog("A7")
 	print("Analog (A1, A2, A3, A6, A7) = %6.3f %6.3f %6.3f %6.3f %6.3f" % (a1, a2, a3, a6, a7))
 
 def print_digitals():
-	d = arduino.readreg(reg.SI)
-	dc = arduino.readreg(reg.SC)
+	d = a.readreg(arduino_wb.SI)
+	dc = a.readreg(arduino_wb.SC)
 	d0, dc0 = d, dc
 	sd = ""
 	sc = ""
-	for i in range(6):
+	for _ in range(6):
 		if (d & 0x20) != 0: sd += " T"
 		else: sd += " F"
 		if (dc & 0x20) != 0: sc += " ^"
@@ -41,11 +42,11 @@ def print_digitals():
 	print("Change Bits  (D8-D3) = %02x   %s" % (dc0, sc))
 
 def print_pwms():
-	p9, p10, p11 = arduino.readreg(reg.PWM9), arduino.readreg(reg.PWM10), arduino.readreg(reg.PWM11)
+	p9, p10, p11 = a.readreg(arduino_wb.PWM9), a.readreg(arduino_wb.PWM10), a.readreg(arduino_wb.PWM11)
 	print("PWM values (D9-D11) = %3d, %3d, %3d" % (p9, p10, p11))
 
 def print_spares():
-	s1, s2, s3 = arduino.readreg(reg.XXX0), arduino.readreg(reg.XXX1), arduino.readreg(reg.XXX2)
+	s1, s2, s3 = a.readreg(arduino_wb.XXX0), a.readreg(arduino_wb.XXX1), a.readreg(arduino_wb.XXX2)
 	print("Spare regs = %3d, %3d, %3d" % (s1, s2, s3))
 
 def print_regs(a0, n):
@@ -56,7 +57,7 @@ def print_regs(a0, n):
 	while True:
 		if i >= n:
 			return
-		d = readreg(a0 + i)
+		d = a.readreg(a0 + i)
 		print("%d " % d, end="")
 		i += 1
 	print("")
