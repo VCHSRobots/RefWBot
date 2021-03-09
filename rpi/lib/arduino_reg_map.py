@@ -46,7 +46,7 @@ reg_table = ((SIGV,"SIGV"), (BAT,"BAT"), (DTME1,"DTME1"), (DTME2,"DTME2"),
 analog_chans = (A1, A2, A3, A6, A7)
 pwm_chans = (PWM9, PWM10, PWM11)
 
-def get_names():
+def get_reg_names():
     '''Provides a list of registor names. '''
     names = []
     for r in reg_table:
