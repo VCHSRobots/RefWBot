@@ -1,4 +1,4 @@
-# utils.py -- Utilities for the drive station
+# utils.py -- Utilities for the water bot software
 # EPIC Robotz, dlb, Mar 2021
 
 def same_in_tolerance(a, b, tol=0.05):

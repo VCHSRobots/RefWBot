@@ -10,6 +10,8 @@ import joystickwidget
 import hardwarestatuswidget
 import commstatuswidget
 import botstatuswidget
+import arduinostatuswidget
+import arduino_decode as adec
 import dscolors
 import joystick
 import threading
@@ -18,7 +20,7 @@ from utils import *
 
 title = "EPIC ROBOTZ"
 teamname = "Reference Bot"
-wx, wy = 300, 750
+wx, wy = 300, 860
 
 class DriveStation(tk.Frame):
 
@@ -32,6 +34,9 @@ class DriveStation(tk.Frame):
         # self.joystick_device = joystick.Joystick(style="Noname Gamepad")
         self.ping_setup()
         self.last_cmd_send_time = time.monotonic() - 100.0
+        self.last_arduino_status = time.monotonic() - 100.0
+        self.last_arduino_ui_update = time.monotonic() - 100.0
+        self.arduino_data = None
         self.run_loop_cnt = 0
 
         # GUI setup
@@ -44,6 +49,7 @@ class DriveStation(tk.Frame):
         self.joystick_ui = joystickwidget.JoystickWidget(self)
         self.commstatus = commstatuswidget.CommStatusWidget(self)
         self.botstatus = botstatuswidget.BotStatusWidget(self)
+        self.arduinostatus = arduinostatuswidget.ArduinoStatusWidget(self)
 
         # Layout, do it manually to get exactly what we want.
         y = 5
@@ -68,6 +74,8 @@ class DriveStation(tk.Frame):
         self.botstatus.place(x=x2, y=y, width=w2, height=h2)
         if h2 > h: y += h2 + 10
         else: y += h + 10
+        w, h = self.arduinostatus.get_size()
+        self.arduinostatus.place(x=x, y=y, width=w, height=h)
 
         self.quitbackgroundtasks = False
         self.bg_count = 0
@@ -95,8 +103,8 @@ class DriveStation(tk.Frame):
         self.mqtt = None
         return
       self.mqtt = mqttrobot.MqttRobot()
-      time.sleep(0.1)  # Found by experimenting!  Must have a delay here.
       self.mqtt.register_topic("wbot/status", self.on_bot_status)
+      self.mqtt.register_topic("wbot/arduino", self.on_arduino_data)
 
     def ping_setup(self):
         ''' Sets up the variables for the ping test. '''
@@ -148,6 +156,10 @@ class DriveStation(tk.Frame):
       self.bot_status0 = self.bot_status1
       self.bot_status1 = data, time.monotonic()
 
+    def on_arduino_data(self, topic, data):
+      self.last_arduino_status = time.monotonic() 
+      self.arduino_data = data
+      
     def monitor_mqtt(self):
         ''' Monitors activity of mqtt, and reports it to the ui. '''
         if self.mqtt == None: return
@@ -235,6 +247,58 @@ class DriveStation(tk.Frame):
         self.hwstatus.set_status("I2C Bus", dscolors.status_warn)
       else:
         self.hwstatus.set_status("I2C Bus", dscolors.status_okay)
+      if i2cerrs == -1:
+        self.botstatus.set_field("I2CErrs", "---")
+      else:
+        self.botstatus.set_field("I2CErrs", "%d" % i2cerrs)
+
+    def monitor_arduino(self):
+      timenow = time.monotonic()
+      if timenow - self.last_arduino_ui_update < 1.0: return
+      self.last_arduino_ui_update = timenow
+      if timenow - self.last_arduino_status > 5.0 or self.arduino_data == None:
+        self.botstatus.set_field("Bat1", "---")
+        self.botstatus.set_field("Bat2", "---")
+        self.botstatus.set_field("Restarts", "---") 
+        self.arduinostatus.set_all_fields("---")
+        return
+      d = adec.data_to_dict(self.arduino_data)
+      if "BAT" in d:
+        self.botstatus.set_field("Bat1", "%5.1f" % d["BAT"])
+      else:
+        self.botstatus.set_field("Bat1", "---")
+      if "SIGV" in d: 
+        self.arduinostatus.set_field("Sigv", "%c" % d["SIGV"])
+      else: 
+        self.arduinostatus.set_field("Sigv", "---")
+      if "BAT" in d: 
+        self.arduinostatus.set_field("Bat", "%5.1f" % d["BAT"])
+      else: 
+        self.arduinostatus.set_field("Bat", "---")
+      if "DTME" in d:
+        ft = d["DTME"] / 1000.0
+        self.arduinostatus.set_field("Time", "%12.3f" % ft)
+      else:
+        self.arduinostatus.set_field("Time", "---")
+      if "A1" in d and "A2" in d and "A3" in d and "A6" in d and "A7" in d:
+        a = d["A1"], d["A2"], d["A3"], d["A6"], d["A7"]
+        self.arduinostatus.set_field("Analog", "%5.2f %5.2f %5.2f %5.2f %5.2f" % a)
+      else:
+        self.arduinostatus.set_field("Analog", "---")
+      if "SI" in d:
+        bits = d["SI"]
+        s = ""
+        for i in range(6):
+          if bits & (1 << (5 - i)) != 0: s += "T "
+          else: s += "F "
+        self.arduinostatus.set_field("Digital", s)
+      else:
+        self.arduinostatus.set_field("Digital", "---")
+      if "PWM9" in d and "PWM10" in d and "PWM11" in d:
+        dd = d["PWM9"], d["PWM10"], d["PWM11"]
+        self.arduinostatus.set_field("PWM", "%5.2f %5.2f %5.2f" % dd)
+      else:
+        self.arduinostatus.set_field("PWM", "---")
 
     def send_loop_cmd(self):
       ''' Sends loop command to bot if we have mqtt.  Send the
@@ -254,6 +318,7 @@ class DriveStation(tk.Frame):
             self.run_loop_cnt += 1
             self.monitor_mqtt()
             self.monitor_botstatus()
+            self.monitor_arduino()
             btns = self.joystick_device.get_buttons()
             xyz = self.joystick_device.get_axis()
             ruv = self.joystick_device.get_ruv()

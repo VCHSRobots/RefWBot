@@ -1,4 +1,4 @@
-# commstatuswidget.py -- Widget to display the communication status
+# arduinostatuswidget.py -- Widget to display the arduino status
 # EPIC Robotz, dlb, Mar 2021
 
 import tkinter as tk  
@@ -6,14 +6,14 @@ import tkinter.font as tkFont
 import dscolors
 
 # Constants to control the layout of the diagram:
-desiredsize = (125, 150) # desired size of widget for placing
+desiredsize = (250, 150) # desired size of widget for placing
 horz_px, vert_px = 210, 150 # size of canvas
 lineheight = 18 # height between fields
-namewidth = 110  # size of the field name
+namewidth = 200  # size of the field name
 xmargin = 2 # x margin for start of field name
-fields = ("Status", "Msg Tx", "Msg Rx", "Ping", "Lst Msg", "Errors")
+fields = ("Sigv", "Bat", "Time", "Analog", "Digital", "PWM")
 
-class CommStatusWidget(tk.Frame):
+class ArduinoStatusWidget(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent, borderwidth=2, relief="groove", bg=dscolors.widget_bg)
         self._canvas = tk.Canvas(self, width=horz_px, height=vert_px, borderwidth=0,
@@ -22,7 +22,7 @@ class CommStatusWidget(tk.Frame):
         self._font1 = tkFont.Font(family="Lucida Grande", weight="bold", size=10)
         self._font2 = tkFont.Font(family="Lucida Grande", size=8)
         self._font3 = tkFont.Font(family="Lucida Grande", weight="bold", size=10)
-        self._title = self._canvas.create_text(2, 7, anchor=tk.W, text="Comm Status",
+        self._title = self._canvas.create_text(2, 7, anchor=tk.W, text="Arduino",
                 font=self._font1, fill="black")
         self._fields = []
         x, y = xmargin, 2*lineheight
@@ -44,5 +44,9 @@ class CommStatusWidget(tk.Frame):
             if n == name:
                 self._canvas.itemconfig(fvalue, text=value)
                 return
-
+    
+    def set_all_fields(self, value):
+        ''' Sets all the fields to the same value.'''
+        for _, _, fvalue in self._fields:
+            self._canvas.itemconfig(fvalue, text=value)
 

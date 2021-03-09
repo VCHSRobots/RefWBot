@@ -143,9 +143,7 @@ class WaterBot():
           self.mqtt.publish("wbot/arduino", sout) 
         except OSError:
           self.i2cerr += 1
-
-
-
+          
   def get_control_inputs(self):
       ''' Gather all inputs '''
       okay, x, y, z = self.mqtt.get_3_floats("wbot/joystick/xyz")

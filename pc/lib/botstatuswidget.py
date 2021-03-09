@@ -20,8 +20,8 @@ class BotStatusWidget(tk.Frame):
             highlightthickness=0, background=dscolors.widget_bg)
         self._canvas.pack(padx=2, pady=5)
         self._font1 = tkFont.Font(family="Lucida Grande", weight="bold", size=10)
-        self._font2 = tkFont.Font(family="Lucida Grande", size=10)
-        self._font3 = tkFont.Font(family="Lucida Grande", weight="bold", size=8)
+        self._font2 = tkFont.Font(family="Lucida Grande", size=8)
+        self._font3 = tkFont.Font(family="Lucida Grande", weight="bold", size=10)
         self._title = self._canvas.create_text(2, 7, anchor=tk.W, text="Bot Status",
                 font=self._font1, fill="black")
         self._fields = []
