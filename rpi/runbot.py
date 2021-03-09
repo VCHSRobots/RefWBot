@@ -7,8 +7,8 @@
 #
 
 import mqttrobot
-import xpwm
-import arduino
+import pca9685 as pca
+import arduino_wb
 import time
 
 dstimeout = 3.0  # number of seconds before kill due to no msg received from driver station
@@ -31,13 +31,18 @@ class WaterBot():
       self.mqtt.register_topic("wbot/joystick/ruv")
       self.mqtt.register_topic("wbot/pingbot", self.on_ping)
       self.hw_okay = True
+      self.pca = None
+      self.arduino = None
+      self.i2cerr = 0
       try:
-        xpwm.board_init()
-        xpwm.killall()
-        self.arduino_okay = arduino.init()
+        self.pca = pca.PCA9685()
+        self.pca.killall()
+        self.arduino = arduino_wb.Arduino_wb() 
+        self.arduino.set_pwm("ALL", 0.0)
       except:
+        self.pca = None
+        self.arduino = None 
         self.hw_okay = False
-      self.arduino_okay = False
       self.last_report_time_to_ds = time.monotonic() - 5.0
       self.last_report_time_to_term = time.monotonic() - 5.0
       self.xyz = (0.0, 0.0, 0.0)
@@ -95,8 +100,13 @@ class WaterBot():
       print("")
       print("Robot Mode: %s" % self.botmode)
       print("Robot Time: %12.3f   Time_to_go: %6.1f" % (time.monotonic(), self.time_to_run))
-      bat1 = arduino.get_battery_voltage()
-      bat2 = 0.0 
+      bat1 = bat2 = 0.0
+      if self.arduino:
+        try:
+          bat1 = self.arduino.get_battery_voltage()
+        except OSError:
+          self.i2cerr += 1
+      print("Hardware okay: %s   i2c errors = %d" % (self.hw_okay, self.i2cerr))
       print("Main Battery: %6.1f volts,  Logic Battery: %6.1f" % (bat1, bat2) )
       print("Connected to MQTT: %s" % self.mqtt.is_connected())
       mqttcounts = self.mqtt.get_counts()
@@ -116,9 +126,13 @@ class WaterBot():
       timenow = time.monotonic()
       if timenow - self.last_report_time_to_ds < 1.000: return
       self.last_report_time_to_ds = timenow
-      bat1 = arduino.get_battery_voltage()
-      bat2 = 0.0
-      s = "%s %d %s %6.1f %6.1f" % ("okay", self.ds_loop_count, self.arduino_okay, bat1, bat2)
+      bat1 = bat2 = 0.0
+      if self.arduino:
+        try:
+          bat1 = self.arduino.get_battery_voltage()
+        except OSError:
+          self.i2cerr += 1
+      s = "%s %d %s %6.1f %6.1f %d" % ("okay", self.ds_loop_count, self.hw_okay, bat1, bat2, self.i2cerr)
       self.mqtt.publish("wbot/status", s)
 
   def get_control_inputs(self):
@@ -155,7 +169,8 @@ class WaterBot():
     if self.run_loop_count == 0:
       print("**** Switching to STOP")
       # Kill all motors and actuators here...
-      xpwm.killall()
+      if self.pca:
+        self.pca.killall()
 
   def run_auto(self, loop_count, time_to_go):
     ''' Called repeatedly during auto.  On inital call after a mode switch,
@@ -180,7 +195,12 @@ class WaterBot():
       #initalize stuff here...
       print("**** Switching to TeleOp")
     _, y, _ = self.xyz 
-    xpwm.set_servo(15, y)
+    try:
+      self.pca.set_servo(15, y)
+    except OSError:
+      self.i2cerr += 1
+    if self.buttons[2]:
+      raise Exception("Test Termination of Program...")
 
 if __name__ == "__main__":
     wb = WaterBot()

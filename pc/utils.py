@@ -11,4 +11,8 @@ def same_in_tolerance(a, b, tol=0.05):
         if delta > tol: return False
     return True
 
+def str_to_bool(s):
+    if s.upper() == "TRUE": return True
+    return False
+
   

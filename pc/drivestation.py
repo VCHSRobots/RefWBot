@@ -175,15 +175,56 @@ class DriveStation(tk.Frame):
         s0 = s1 = ""
       if s0 != "okay" or s1 != "okay":
         self.hwstatus.set_status("Code", dscolors.status_error)
+        self.hwstatus.set_status("I2C Bus", dscolors.indicator_bg)
+        self.hwstatus.set_status("Bat M", dscolors.indicator_bg)
+        self.hwstatus.set_status("Bat L", dscolors.indicator_bg)
         return
       timenow = time.monotonic()
       if timenow - t0 > 10.0 or timenow - t1 > 9.0:
         self.hwstatus.set_status("Code", dscolors.status_error)
+        self.hwstatus.set_status("I2C Bus", dscolors.indicator_bg)
+        self.hwstatus.set_status("Bat M", dscolors.indicator_bg)
+        self.hwstatus.set_status("Bat L", dscolors.indicator_bg)
         return
       if timenow - t0 > 3.0 or timenow - t1 > 2.5:
         self.hwstatus.set_status("Code", dscolors.status_warn)
+      else:
+        self.hwstatus.set_status("Code", dscolors.status_okay)
+      words = d1.split()
+      if len(words) != 6:
+        self.hwstatus.set_status("I2C Bus", dscolors.status_error)
+        self.hwstatus.set_status("Bat M", dscolors.status_error)
+        self.hwstatus.set_status("Bat L", dscolors.status_error)
         return
-      self.hwstatus.set_status("Code", dscolors.status_okay)
+      bat1 = bat2 = 0.0
+      try:
+        bat1 = float(words[3])
+        bat2 = float(words[4])
+      except ValueError:
+        bat1 = bat2 = 0.0 
+      try: 
+        i2cerrs = int(words[5])
+      except ValueError:
+        i2cerrs = -1
+      if bat1 > 10.75: 
+        self.hwstatus.set_status("Bat M", dscolors.status_okay)
+      elif bat1 > 9.25:
+        self.hwstatus.set_status("Bat M", dscolors.status_warn)
+      else:
+        self.hwstatus.set_status("Bat M", dscolors.status_error)
+      if bat2 > 10.75: 
+        self.hwstatus.set_status("Bat L", dscolors.status_okay)
+      elif bat2 > 9.25:
+        self.hwstatus.set_status("Bat L", dscolors.status_warn)
+      else:
+        self.hwstatus.set_status("Bat L", dscolors.status_error)
+      hwokay = str_to_bool(words[2])
+      if not hwokay or i2cerrs > 15 or i2cerrs < 0:
+        self.hwstatus.set_status("I2C Bus", dscolors.status_error)
+      elif i2cerrs > 0:
+        self.hwstatus.set_status("I2C Bus", dscolors.status_warn)
+      else:
+        self.hwstatus.set_status("I2C Bus", dscolors.status_okay)
 
     def send_loop_cmd(self):
       ''' Sends loop command to bot if we have mqtt.  Send the
