@@ -4,12 +4,13 @@
 
 import time
 import sys
-import xpwm
+import pca9685 as pca
 
 if len(sys.argv) < 3:
-	print("setservo -- sets position of a servo connected to the pi")
+	print("setservo -- sets position of a servo connected to the pca9685 module")
 	print("usage: setservo chan usec")
 	print("where chan is a number between 0-15, and usec is the pulsewigth in usecs.")
+	print("Note: the module should be initalized with initservos before using this program.")
 	sys.exit()
   
 try:
@@ -24,7 +25,7 @@ if chan < 0 or chan > 15:
 if usec < 0 or usec > 10000:
 	print("usec out of range.")
 	sys.exit()
-#xpwm.board_init()
-xpwm.pwm_inited = True  # Avoid resetting the board.  User responsible for initing.
-xpwm.set_pwm(chan, usec)
+
+servoboard = pca.PCA9685(skipinit=True)
+servoboard.set_pwm(chan, usec)
 print("Servo on channel %d set to %d usecs." % (chan, usec))

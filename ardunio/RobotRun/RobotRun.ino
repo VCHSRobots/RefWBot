@@ -245,7 +245,7 @@ void monitor_battery() {
     // Read the voltage once every second...
     batcount = 0;
     int bv = analogRead(bat_input_pin);  // Requires about .1 ms to read.
-    batvolts = bv * 14.75 / 1024.0;  // Where 15.92 = Full range in volts
+    batvolts = bv * 16.0 / 1024.0;  // Where 15.92 = Full range in volts
   }
   if (batvolts > 10.5) {
     digitalWrite(bat_monitor_pin, HIGH);

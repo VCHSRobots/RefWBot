@@ -2,7 +2,8 @@
 # initservos -- Init the servo board connected to the pi
 # EPIC Robotz, dlb, Feb 2021
 
-import xpwm
+import pca9685 as pca
 
-xpwm.board_init()
+board = pca.PCA9685()
+board.init()
 print("Servo board should be initalized.  Servo settings let unchanged.")

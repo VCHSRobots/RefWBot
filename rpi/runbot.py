@@ -95,6 +95,9 @@ class WaterBot():
       print("")
       print("Robot Mode: %s" % self.botmode)
       print("Robot Time: %12.3f   Time_to_go: %6.1f" % (time.monotonic(), self.time_to_run))
+      bat1 = arduino.get_battery_voltage()
+      bat2 = 0.0 
+      print("Main Battery: %6.1f volts,  Logic Battery: %6.1f" % (bat1, bat2) )
       print("Connected to MQTT: %s" % self.mqtt.is_connected())
       mqttcounts = self.mqtt.get_counts()
       print("MQTT messages received: %d " % mqttcounts["rx"])
@@ -113,8 +116,9 @@ class WaterBot():
       timenow = time.monotonic()
       if timenow - self.last_report_time_to_ds < 1.000: return
       self.last_report_time_to_ds = timenow
-      bat1 = arduino.get_battery_voltage
-      s = "%s %d %s %5.1f" % ("okay", self.ds_loop_count, self.arduino_okay, bat1)
+      bat1 = arduino.get_battery_voltage()
+      bat2 = 0.0
+      s = "%s %d %s %6.1f %6.1f" % ("okay", self.ds_loop_count, self.arduino_okay, bat1, bat2)
       self.mqtt.publish("wbot/status", s)
 
   def get_control_inputs(self):
