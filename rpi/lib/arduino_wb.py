@@ -138,7 +138,7 @@ class Arduino_wb():
     def get_analog(self, channel):
         ''' Returns scaled analog reading from arduino
         
-            Channel number can be constants from the reg map, such as reg.A6
+            Channel number can be constants from the reg map, such as A6
             or the string names can be used, such as "A6".   
             Return range: 0.0 to 1.0''' 
         ichan = -1
@@ -201,7 +201,30 @@ class Arduino_wb():
         for i in pwm_chans:
             if ichan == i: okay = True
         if not okay: raise Exception("Unknown or invalid channel.")
-
         self.writereg(ichan, iv)
 
-    
+    def get_pwm(self, chan):
+        ''' Gets the current pwm setting (0-1) on the given chan.
+        The chan can be the string name of a registor such as "PWM10", or its 
+        address from the table above. '''
+        ichan = -1
+        if type(chan) is str:
+            ichan = self.name2adr(chan)
+        if type(chan) is int:
+            ichan = chan
+        okay = False
+        for i in pwm_chans:
+            if ichan == i: okay = True
+        if not okay: raise Exception("Unknown or invalid channel.")
+        iv = self.readreg(ichan)
+        return (iv / 255.0)
+
+    def get_all(self):
+        ''' Reads all the registers in the arduino and returns them in a
+        list of bytes. '''
+        d = []
+        for i in range(LAST + 1):
+            v = self.readreg(i)
+            d.append(v)
+        return d
+

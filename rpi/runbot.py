@@ -134,6 +134,17 @@ class WaterBot():
           self.i2cerr += 1
       s = "%s %d %s %6.1f %6.1f %d" % ("okay", self.ds_loop_count, self.hw_okay, bat1, bat2, self.i2cerr)
       self.mqtt.publish("wbot/status", s)
+      if self.arduino:
+        try:
+          dat = self.arduino.get_all()
+          sout = ""
+          for d in dat:
+            sout += "%03d " % d
+          self.mqtt.publish("wbot/arduino", sout) 
+        except OSError:
+          self.i2cerr += 1
+
+
 
   def get_control_inputs(self):
       ''' Gather all inputs '''

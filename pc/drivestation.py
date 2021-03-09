@@ -9,6 +9,7 @@ import gameclockwidget
 import joystickwidget
 import hardwarestatuswidget
 import commstatuswidget
+import botstatuswidget
 import dscolors
 import joystick
 import threading
@@ -42,6 +43,7 @@ class DriveStation(tk.Frame):
         self.gameclock = gameclockwidget.GameClockWidget(self)
         self.joystick_ui = joystickwidget.JoystickWidget(self)
         self.commstatus = commstatuswidget.CommStatusWidget(self)
+        self.botstatus = botstatuswidget.BotStatusWidget(self)
 
         # Layout, do it manually to get exactly what we want.
         y = 5
@@ -61,7 +63,11 @@ class DriveStation(tk.Frame):
         y += h + 10
         w, h = self.commstatus.get_size()
         self.commstatus.place(x=x, y=y, width=w, height=h)  
-        y += h + 10
+        x2 = x + w + 5
+        w2, h2 = self.botstatus.get_size()
+        self.botstatus.place(x=x2, y=y, width=w2, height=h2)
+        if h2 > h: y += h2 + 10
+        else: y += h + 10
 
         self.quitbackgroundtasks = False
         self.bg_count = 0
@@ -78,6 +84,10 @@ class DriveStation(tk.Frame):
             self.commstatus.set_field("Lst Msg", "-- sec")
             self.commstatus.set_field("Errors", "0")  
             self.hwstatus.set_status("Comm", "red")
+            self.botstatus.set_field("Bat1", "---")
+            self.botstatus.set_field("Bat2", "---")
+            self.botstatus.set_field("I2CErrs", "---")
+            self.botstatus.set_field("Restarts", "---")
 
     def setup_mqtt(self, enable):
       ''' Do the setup for MQTT. '''

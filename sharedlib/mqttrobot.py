@@ -150,5 +150,3 @@ class MqttRobot():
         return True, btns
 
 
-    
-
