@@ -17,6 +17,7 @@
 #    ---    ---   -----           -----------
 #   1133  49685   Logitech 3D     Logitech Extreme 3D Pro Joystick
 #    121      6   Noname Gamepad  Noname copy of X-Box Gamepad
+#   1118    767   XBox Gamepad    X Box Gamepad with removable USB wire
 #
 # The style and description are our own designations for the MID
 # and PID.  They are returned by the get_style() and 
@@ -28,7 +29,8 @@ import rawjoystick_win as js
 
 known_devices = (
     ((1133, 49685), "Logitech 3D", "Logitech Extreme 3D Pro Joystick"),
-    ((121,      6), "Noname Gamepad", "Noname copy of X-Box Gamepad"))
+    ((121,      6), "Noname Gamepad", "Noname copy of X-Box Gamepad"),
+    ((1118,  767), "XBox Gamepad", "X Box Gamepad with removable USB wire"))
 
 def get_devices():
     ''' Returns a list of joystick devices, where each device is
