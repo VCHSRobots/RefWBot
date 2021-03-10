@@ -34,6 +34,7 @@ class WaterBot():
       self.pca = None
       self.arduino = None
       self.i2cerr = 0
+      self.ds_loop_count = 0
       try:
         self.pca = pca.PCA9685()
         self.pca.killall()
