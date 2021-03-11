@@ -5,6 +5,6 @@
 import arduino_wb
 
 a = arduino_wb.Arduino_wb()
-a.clear_change_bits()
-print("Change bits should be cleared.")
-
+okay = a.clear_change_bits()
+if okay: print("Change bits should be cleared.")
+else: print("Failed to change bits.  Bus Error!")

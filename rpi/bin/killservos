@@ -2,8 +2,15 @@
 # killservos -- Turn off all channels on the servo modula board
 # EPIC Robotz, dlb, Feb 2021
 
+import sys
 import pca9685 as pca
 
 board = pca.PCA9685()
-board.killall()
+if not board.is_initialized():
+    print("Unable to initalize the pca module. Probably due to I2C bus errors.")
+    sys.exit()
+okay = board.killall()
+if not okay:
+    print("Unable to kill all channels, probably due to I2C bus errors.")
+    sys.exit()
 print("All pwm should be shut down on the pca9685 module.")

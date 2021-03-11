@@ -6,4 +6,7 @@ import pca9685 as pca
 
 board = pca.PCA9685()
 board.init()
-print("Servo board should be initalized.  Servo settings let unchanged.")
+if board.is_initialized():
+    print("Servo board should be initalized.  Servo settings let unchanged.")
+else:
+    print("Problem initailizing board.  Probably due to IO Error on the I2C bus.")

@@ -4,33 +4,43 @@
 
 import sys
 import arduino_wb
+import arduino_reg_map as reg
+import utils 
 import time
 
+regnames = [reg.adr2name(adr) for adr in reg.pwm_chans]
 if len(sys.argv) < 3:
 	print("setpwm -- sets the pwm of an output pwm pin on the arduino.")
 	print("usage: setpwm chan val")
-	print("where chan is one of [0, 9, 10, 11], and the val is 0-255.")
-	print("chan can also be all, pwm9, pwm10, pwm11.")
-	print("use chan=0 to set all pwm values at once.")
+	print("where chan can be one of the following: \nALL %s" %  " ".join(regnames))
+	print("and val is between 0.0 and 1.0.")
+	print("Note also, that 0 can be used instead of ALL, and the 'PWM'")
+	print("in each register name can be omitted.")
 	sys.exit()
 
-chan = -1
 schan = sys.argv[1]
-if schan == "all" or schan == "ALL": chan = 0
-if schan == "pwm9" or schan == "PWM9": chan = 9
-if schan == "pwm10" or schan == "PWM10": chan = 10
-if schan == "pwm11" or schan == "PWM11": chan = 11
+try:
+	i = int(schan)
+	if i == 0: 
+		schan = "ALL"
+	else:
+		schan = "PWM%d" % i
+except ValueError:
+	schan = sys.argv[1]
 
-if chan < 0:
-	try:
-		chan = int(sys.argv[1])
-	except:
-		print("Argument for chan is invalid.")
-		sys.exit()
-
-if chan != 0 and chan != 9 and chan != 10 and chan != 11:
-	print("Unknown channel number.  Must be 0, 9, 10, or 11.")
-	sys.exit()
+adr = -1
+if schan.lower() == "all": 
+	schan = "ALL"
+	adr = 0
+else:
+	for n in regnames:
+		if schan.lower() == n.lower():
+			adr = reg.name2adr(n)
+			schan = n
+			break
+if adr < 0:
+	print("Invalid chan.")
+	sys.exit() 
 
 try:
 	val = float(sys.argv[2])
@@ -42,17 +52,11 @@ if val < 0 or val > 1.0:
 	print("Argument for pwm value is out of range. Must be 0.0 to 1.0.")
 	sys.exit()
 
-r = -1
-if chan == 0: r = 0
-if chan == 9: r = arduino_wb.PWM9 
-if chan == 10: r = arduino_wb.PWM10
-if chan == 11: r = arduino_wb.PWM11
-if r == -1:
-	print("Unknown pwm channel.")
-	sys.exit()
-
 a = arduino_wb.Arduino_wb()
-a.set_pwm(r, val)
-
-print("PWM channel %d set to %6.3f." % (chan, val))
+try:
+	a.set_pwm(adr, val)
+except:
+	print("Failed. Bus error!")
+	sys.exit()
+print("PWM channel %s set to %6.3f." % (schan, val))
 

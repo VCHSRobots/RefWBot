@@ -15,4 +15,17 @@ def str_to_bool(s):
     if s.upper() == "TRUE": return True
     return False
 
+def extendstr(s, n):
+    ''' Extends s so that it is n chars long.  Spaces are 
+    added to extend the string. If the length of s is 
+    already greater than or equal to n, nothing is done.'''
+    nadd = n - len(s)
+    if nadd <= 0: return s 
+    sext = ""
+    for _ in range(nadd):
+        sext += " "
+    return s + sext
+
+    
+
   

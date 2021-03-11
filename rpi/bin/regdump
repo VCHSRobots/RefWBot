@@ -4,30 +4,42 @@
 
 import sys
 import arduino_wb
+import arduino_reg_map as reg
+import arduino_decode as decode
 import time
 
 a = arduino_wb.Arduino_wb()
 
 def print_status():
-    id = a.get_version()
-    print("Device Id = %c" % id)
-    u0, u1, u2, u3 = a.get_timestamp_bytes()
-    tt = a._fourbytestolong(u3, u2, u1, u0)
-    print("Device Time = %d  (%02x %02x %02x %02x)" % (tt, u0, u1, u2, u3))
-    batv = a.get_battery_voltage()
-    print("Battery Voltage = %4.1f" % batv)
+	okay, id = a.get_version()
+	if not okay: return False
+	print("Device Id = %c" % id)
+	okay, blist = a.get_timestamp_bytes()
+	if not okay: return False
+	u0, u1, u2, u3 = blist
+	tt = decode.fourbytestolong(u3, u2, u1, u0)
+	print("Device Time = %d  (%02x %02x %02x %02x)" % (tt, u0, u1, u2, u3))
+	okay, batv = a.get_battery_voltage()
+	if not okay: return False
+	print("Battery Voltage = %4.1f" % batv)
+	return True
 
 def print_analogs():
-	a1 = a.get_analog("A1")
-	a2 = a.get_analog("A2")
-	a3 = a.get_analog("A3")
-	a6 = a.get_analog("A6")
-	a7 = a.get_analog("A7")
+	ok1, a1 = a.get_analog("A1")
+	ok2, a2 = a.get_analog("A2")
+	ok3, a3 = a.get_analog("A3")
+	ok4, a6 = a.get_analog("A6")
+	ok5, a7 = a.get_analog("A7")
+	if not ok1 or not ok2 or not ok3 or not ok4 or not ok5: return False
 	print("Analog (A1, A2, A3, A6, A7) = %6.3f %6.3f %6.3f %6.3f %6.3f" % (a1, a2, a3, a6, a7))
+	return True
 
 def print_digitals():
-	d = a.readreg(arduino_wb.SI)
-	dc = a.readreg(arduino_wb.SC)
+	try:
+		d = a.readreg(reg.SI)
+		dc = a.readreg(reg.SC)
+	except IOError:
+		return False
 	d0, dc0 = d, dc
 	sd = ""
 	sc = ""
@@ -40,32 +52,29 @@ def print_digitals():
 		dc = dc << 1
 	print("Digital Bits (D8-D3) = %02x   %s" % (d0, sd))
 	print("Change Bits  (D8-D3) = %02x   %s" % (dc0, sc))
+	return True
 
 def print_pwms():
-	p9, p10, p11 = a.readreg(arduino_wb.PWM9), a.readreg(arduino_wb.PWM10), a.readreg(arduino_wb.PWM11)
-	print("PWM values (D9-D11) = %3d, %3d, %3d" % (p9, p10, p11))
+	try:
+		p9, p10, p11 = a.readreg(reg.PWM9), a.readreg(reg.PWM10), a.readreg(reg.PWM11)
+	except IOError:
+		return False
+	print("PWM values (PWM9-11) = %3d, %3d, %3d" % (p9, p10, p11))
+	return True
 
 def print_spares():
-	s1, s2, s3 = a.readreg(arduino_wb.XXX0), a.readreg(arduino_wb.XXX1), a.readreg(arduino_wb.XXX2)
+	try:
+		s1, s2, s3 = a.readreg(reg.XXX0), a.readreg(reg.XXX1), a.readreg(reg.XXX2)
+	except IOError:
+		return False
 	print("Spare regs = %3d, %3d, %3d" % (s1, s2, s3))
+	return True
 
-def print_regs(a0, n):
-	i = 0
-	if n <= 0:
-		return
-	print("Regs[%d-%d]=" % (a0, a0+n-1), end="")
-	while True:
-		if i >= n:
-			return
-		d = a.readreg(a0 + i)
-		print("%d " % d, end="")
-		i += 1
-	print("")
-
-print_status()
-print_analogs()
-print_digitals()
-print_pwms()
-print_spares()
+fncs = (print_status, print_analogs, print_digitals, print_pwms, print_spares)
+for f in fncs:
+	okay = f()
+	if not okay:
+		print("Failed. Bus error!")
+		break
 print("\n")
 

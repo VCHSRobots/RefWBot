@@ -27,5 +27,8 @@ if usec < 0 or usec > 10000:
 	sys.exit()
 
 servoboard = pca.PCA9685(skipinit=True)
-servoboard.set_pwm(chan, usec)
+okay = servoboard.set_pwm(chan, usec)
+if not okay:
+	print("Unable to set the servo due to IO Errors -- probably due to the I2C bus.")
+	sys.exit()
 print("Servo on channel %d set to %d usecs." % (chan, usec))

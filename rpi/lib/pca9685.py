@@ -33,80 +33,126 @@ b_och     = 1 << 3  # Controls with PWM settings take effect. We want 1 for imme
 b_outdrv  = 1 << 2  # Sets totem pole (1) or Open Drain (0) outputs. We want 1.
 
 class PCA9685():
-    def __init__(self, addr=default_addr, bus_num=default_bus_num, skipinit=False):
+    def __init__(self, addr=default_addr, bus_num=default_bus_num, skipinit=False, bus_monitor=None):
         self._addr = default_addr
         self._bus_num = default_bus_num
         self._bus = SMBus(self._bus_num)
         self._inited = False
         self._usec_per_tick = 4.84  # Recalculated when frequency is set.
+        self._bus_monitor = bus_monitor
         if skipinit:
             self._inited = True
         else:
             self.init()
 
-    def write_reg(self, reg, dat):
-        ''' Writes to a register in the PCA9685 module. '''
-        self._bus.write_byte_data(self._addr, reg, dat)
-
-    def read_reg(self, reg):
-        ''' Reads from a register in the PCA9685 module. '''
-        return self._bus.read_byte_data(self._addr, reg)
+    def is_initialized(self):
+        ''' Returns True if the pca has been properly initalized.  Note
+        that bus errors can prevent proper initalization.  If so, you 
+        should try calling init().'''
+        return self._inited
+    
+    def writereg(self, regadr, dat):
+        ''' Reads a register from the pca9685.  This is done without
+        protection against errors on the I2C bus. '''
+        try:
+            self._bus.write_byte_data(self._addr, regadr, dat)
+            if self._bus_monitor: self._bus_monitor.on_success()
+        except IOError:
+            if self._bus_monitor: self._bus_monitor.on_fail()
+            raise
+    
+    def readreg(self, regadr):
+        ''' Writes to a register on the pca9685.  This is done without
+        protection against errors on the I2C bus. '''
+        try:
+            dat = self._bus.read_byte_data(self._addr, regadr)
+            if self._bus_monitor: self._bus_monitor.on_success()
+            return dat
+        except IOError:    
+            if self._bus_monitor: self._bus_monitor.on_fail()
+            raise
 
     def set_pwm(self, chan, pulsewidth_usec):
-        ''' Sets a channel's pulsewidth, given in usecs. '''
+        ''' Sets a channel's pulsewidth, given in usecs. 
+            Returns True if no error detected. '''
         if not self._inited: return
         offtime = int(round(pulsewidth_usec / self._usec_per_tick))
         byteH = (offtime >> 8) & 0xFF
         byteL = offtime & 0xFF
         regnum = r_led0_on_L + (chan * 4)
-        # Note: all 4 regs for the chan must be writen to cause effect
-        self.write_reg(regnum + 0, 0)     # Low byte of on time
-        self.write_reg(regnum + 1, 0)     # High byte of on time
-        self.write_reg(regnum + 2, byteL) # Low byte of off time
-        self.write_reg(regnum + 3, byteH) # High byte of off time
+        try:
+            # Note: all 4 regs for the chan must be writen to cause effect
+            self.writereg(regnum + 0, 0)     # Low byte of on time
+            self.writereg(regnum + 1, 0)     # High byte of on time
+            self.writereg(regnum + 2, byteL) # Low byte of off time
+            self.writereg(regnum + 3, byteH) # High byte of off time
+        except IOError:
+            return False
+        return True
 
     def set_frequency(self, hz, masterfreq=2500000):
-        ''' Sets the PWM frequency for all channels. Default is 50 Hz. '''
+        ''' Sets the PWM frequency for all channels. Default is 50 Hz. 
+            Returns True if no error detected. '''
         prescale = int(round(masterfreq / (4096.0 * hz)) -1)
         if prescale < 3: prescale = 3
         if prescale > 255: prescale = 255
+        self._usec_per_tick = 1000000 / (masterfreq / prescale)
         #print("prescale=%f" % prescale)
         # to change preset, must p ut device in sleep mode!
-        mode = self.read_reg(r_mode1)
-        self.write_reg(r_mode1, (mode & ~b_sleep) | b_sleep)
-        self.write_reg(r_prescale, prescale)
-        self.write_reg(r_mode1, mode)
-        time.sleep(0.0005)	# allow oscillator to get going again
-        self.write_reg(r_mode1, mode | b_restart)  # reset the restart bit
-        self._usec_per_tick = 1000000 / (masterfreq / prescale)
-        # print("usec_per_tick=%f" % self._usec_per_tick)
+        try:
+            mode = self.readreg(r_mode1)
+            self.writereg(r_mode1, (mode & ~b_sleep) | b_sleep)
+            self.writereg(r_prescale, prescale)
+            self.writereg(r_mode1, mode)
+            time.sleep(0.0005)	# allow oscillator to get going again
+            self.writereg(r_mode1, mode | b_restart)  # reset the restart bit
+            # print("usec_per_tick=%f" % self._usec_per_tick)
+        except IOError:
+            return False
+        return True
 
     def init(self, masterfreq = default_masterfreq):
         ''' Initialize PWM module -- must be called before setting pwm signals. 
-            Currently, this is being done when the object is created.'''
-        # set overall modes with the two main registors
-        self.write_reg(r_mode1, 0)
-        self.write_reg(r_mode2, b_och | b_outdrv)
-        time.sleep(0.0005) # Time required to start the chips oscillator.
-        # now we need to write zero to the sleep bit without distrubing the other bits
-        mode = self.read_reg(r_mode1)
-        self.write_reg(r_mode1, mode & ~b_sleep)
-        time.sleep(0.0005)
-        self.set_frequency(50, masterfreq=masterfreq)
-        self._inited = True 
+            Currently, this is being done when the object is created.
+            Returns True if no error detected. '''
+        try:
+            # set overall modes with the two main registors
+            self.writereg(r_mode1, 0)
+            self.writereg(r_mode2, b_och | b_outdrv)
+            time.sleep(0.0005) # Time required to start the chips oscillator.
+            # now we need to write zero to the sleep bit without distrubing the other bits
+            mode = self.readreg(r_mode1)
+            self.writereg(r_mode1, mode & ~b_sleep)
+            time.sleep(0.0005)
+            okay = self.set_frequency(50, masterfreq=masterfreq)
+            if not okay: return False
+            self._inited = True 
+        except IOError:
+            self._inited = False
+            return False 
+        return True
 
     def set_servo(self, chan, rotation, minpw=800, maxpw=2200):
         ''' Set servo rotation from -1 (lowest angle) to 1 (highest angle).
-        You can control the extreme settings for pulsewidth with minpw, maxpw.'''
+        You can control the extreme settings for pulsewidth with minpw, maxpw.
+        Returns True if no error detected. '''
         span = int(maxpw - minpw)
         center = int(minpw + span/2)
         move = int(rotation * (span / 2))
         usec = center + move
         if usec > maxpw: usec = maxpw 
         if usec < minpw: usec = minpw
-        self.set_pwm(chan, usec)
-    
+        try:
+            self.set_pwm(chan, usec)
+        except IOError:
+            return False
+        return True
+        
     def killall(self):
-        ''' Shuts down pwm on all channels. '''
-        for i in range(16):
-            self.set_pwm(i, 0)
+        ''' Shuts down pwm on all channels. Returns True if no error detected.'''
+        try:
+            for i in range(16):
+                self.set_pwm(i, 0)
+        except IOError:
+            return False 
+        return True

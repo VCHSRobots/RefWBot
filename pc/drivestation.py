@@ -200,6 +200,10 @@ class DriveStation(tk.Frame):
         self.hwstatus.set_status("I2C Bus", dscolors.indicator_bg)
         self.hwstatus.set_status("Bat M", dscolors.indicator_bg)
         self.hwstatus.set_status("Bat L", dscolors.indicator_bg)
+        self.botstatus.set_field("Bat1", "---")
+        self.botstatus.set_field("Bat2", "---")
+        self.botstatus.set_field("I2CErrs", "---")
+        self.botstatus.set_field("Restarts", "---")
         return
       timenow = time.monotonic()
       if timenow - t0 > 10.0 or timenow - t1 > 9.0:
@@ -207,16 +211,24 @@ class DriveStation(tk.Frame):
         self.hwstatus.set_status("I2C Bus", dscolors.indicator_bg)
         self.hwstatus.set_status("Bat M", dscolors.indicator_bg)
         self.hwstatus.set_status("Bat L", dscolors.indicator_bg)
+        self.botstatus.set_field("Bat1", "---")
+        self.botstatus.set_field("Bat2", "---")
+        self.botstatus.set_field("I2CErrs", "---")
+        self.botstatus.set_field("Restarts", "---")
         return
-      if timenow - t0 > 3.0 or timenow - t1 > 2.5:
+      elif timenow - t0 > 4.0 or timenow - t1 > 3.0:
         self.hwstatus.set_status("Code", dscolors.status_warn)
       else:
         self.hwstatus.set_status("Code", dscolors.status_okay)
       words = d1.split()
-      if len(words) != 6:
+      if len(words) != 7:
         self.hwstatus.set_status("I2C Bus", dscolors.status_error)
         self.hwstatus.set_status("Bat M", dscolors.status_error)
         self.hwstatus.set_status("Bat L", dscolors.status_error)
+        self.botstatus.set_field("Bat1", "---")
+        self.botstatus.set_field("Bat2", "---")
+        self.botstatus.set_field("I2CErrs", "---")
+        self.botstatus.set_field("Restarts", "---")
         return
       bat1 = bat2 = 0.0
       try:
@@ -228,6 +240,10 @@ class DriveStation(tk.Frame):
         i2cerrs = int(words[5])
       except ValueError:
         i2cerrs = -1
+      try: 
+        restarts = int(words[6])
+      except ValueError:
+        restarts = -1
       if bat1 > 10.75: 
         self.hwstatus.set_status("Bat M", dscolors.status_okay)
       elif bat1 > 9.25:
@@ -251,15 +267,18 @@ class DriveStation(tk.Frame):
         self.botstatus.set_field("I2CErrs", "---")
       else:
         self.botstatus.set_field("I2CErrs", "%d" % i2cerrs)
+      if restarts == -1:
+        self.botstatus.set_field("Restarts", "---")
+      else:
+        self.botstatus.set_field("Restarts", "%d" % restarts)
 
     def monitor_arduino(self):
       timenow = time.monotonic()
       if timenow - self.last_arduino_ui_update < 1.0: return
       self.last_arduino_ui_update = timenow
-      if timenow - self.last_arduino_status > 5.0 or self.arduino_data == None:
+      if timenow - self.last_arduino_status > 4.0 or self.arduino_data == None:
         self.botstatus.set_field("Bat1", "---")
         self.botstatus.set_field("Bat2", "---")
-        self.botstatus.set_field("Restarts", "---") 
         self.arduinostatus.set_all_fields("---")
         return
       d = adec.data_to_dict(self.arduino_data)
@@ -267,6 +286,7 @@ class DriveStation(tk.Frame):
         self.botstatus.set_field("Bat1", "%5.1f" % d["BAT"])
       else:
         self.botstatus.set_field("Bat1", "---")
+      self.botstatus.set_field("Bat2", "0.0")
       if "SIGV" in d: 
         self.arduinostatus.set_field("Sigv", "%c" % d["SIGV"])
       else: 
