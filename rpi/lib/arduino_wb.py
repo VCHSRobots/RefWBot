@@ -28,6 +28,9 @@ class Arduino_wb():
         except IOError:
             if self._bus_monitor: self._bus_monitor.on_fail()
             raise
+        except OSError:
+            if self._bus_monitor: self._bus_monitor.on_fail()
+            raise IOError()
     
     def readreg(self, regadr):
         ''' Writes to a register on the arduino.  This is done without
@@ -39,6 +42,9 @@ class Arduino_wb():
         except IOError:    
             if self._bus_monitor: self._bus_monitor.on_fail()
             raise
+        except OSError:
+            if self._bus_monitor: self._bus_monitor.on_fail()
+            raise IOError()
 
     def test_health(self):
         ''' Tests the health of the i2c bus and the arduino by writing
@@ -179,9 +185,12 @@ class Arduino_wb():
         if type(chan) is int:
             ichan = chan
         if ichan == 0: 
-            for i in reg.pwm_chans:
-                self.writereg(i, iv)
-            return
+            try:
+              for i in reg.pwm_chans:
+                  self.writereg(i, iv)
+            except IOError:
+              return False
+            return True
         okay = False
         for i in reg.pwm_chans:
             if ichan == i: okay = True

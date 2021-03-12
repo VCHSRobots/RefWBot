@@ -149,7 +149,8 @@ class WaterBot():
       bat1 = bat2 = 0.0
       if self.hw_okay:
           _, bat1 = self.arduino.get_battery_voltage()
-      print("Hardware okay: %s   i2c errors = %d" % (self.hw_okay, self.bus_monitor.get_total_error_count()))
+      print("Hardware okay: %s   i2c errors = %d  restarts = %d" % (self.hw_okay, 
+        self.bus_monitor.get_total_error_count(), self.restart_count))
       print("Main Battery: %6.1f volts,  Logic Battery: %6.1f" % (bat1, bat2) )
       print("Connected to MQTT: %s" % self.mqtt.is_connected())
       mqttcounts = self.mqtt.get_counts()

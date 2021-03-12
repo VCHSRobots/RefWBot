@@ -60,7 +60,10 @@ class PCA9685():
         except IOError:
             if self._bus_monitor: self._bus_monitor.on_fail()
             raise
-    
+        except OSError:
+            if self._bus_monitor: self._bus_monitor.on_fail()
+            raise IOError()
+
     def readreg(self, regadr):
         ''' Writes to a register on the pca9685.  This is done without
         protection against errors on the I2C bus. '''
@@ -71,6 +74,9 @@ class PCA9685():
         except IOError:    
             if self._bus_monitor: self._bus_monitor.on_fail()
             raise
+        except OSError:
+            if self._bus_monitor: self._bus_monitor.on_fail()
+            raise IOError()
 
     def set_pwm(self, chan, pulsewidth_usec):
         ''' Sets a channel's pulsewidth, given in usecs. 
