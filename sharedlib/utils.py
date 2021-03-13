@@ -26,6 +26,21 @@ def extendstr(s, n):
         sext += " "
     return s + sext
 
+def abs(x):
+  ''' Returns the absolute value of a number. '''
+  if x < 0.0: return -x  
+  else: return x
+
+def clamp(v, v0, v1):
+  ''' Returns a clammped value.  If v is less then v0,
+  v0 is returned. If v is greater then v1, v1 is returned.
+  Otherwize, v is returned unchanged. '''
+  if v > v1: return v1
+  if v < v0: return v0
+  return v
+
+
+
     
 
   
