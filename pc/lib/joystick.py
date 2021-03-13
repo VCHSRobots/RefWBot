@@ -182,9 +182,10 @@ class Joystick():
             for _ in range(n): btns.append(False)
         return btns
     
-    def get_axis(self):
+    def get_axis(self, axis_number=0):
         ''' Returns a list of three floats (-1 to +1) describing the joystick's XYZ axis.
-        If there is an error or the joystick is not connected, zeros are returned. '''
+        If there is an error or the joystick is not connected or the axis doesn't exist,
+        zeros are returned. '''
         if not self._is_inited: self.reset()
         if not self._is_inited: 
             return [0, 0, 0]
@@ -201,6 +202,7 @@ class Joystick():
         ''' Returns a list of three floats (-1 to +1) describing the joystick's rotational axis.
         For Logitech this is the second set of axis.  If there is an error, or the joystick is
         not connected, zeros are returned. '''
+        # return self.get_axis(1)
         if not self._is_inited: self.reset()
         if not self._is_inited: 
             return [0, 0, 0]
