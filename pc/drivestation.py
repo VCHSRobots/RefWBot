@@ -1,19 +1,28 @@
 # drivestation.py -- Drive Station Program for Reference Water Bot
 # Epic Robotz, dlb, Mar 2021
 
+#Check what platform we are working on
+import platform
+if platform.system() == "Windows":
+  import joystick
+elif platform.system() == "Linux":
+  import joystick_linux as joystick
+
 import sys
 import tkinter as tk
 import tkinter.font as tkFont
 import mqttrobot
 import gameclockwidget
 import joystickwidget
+''' Alternate joystick widget imports '''
+#import joystickwidget_xbox as joystickwidget
+#import joystickwidget_logibox as joystickwidget
 import hardwarestatuswidget
 import commstatuswidget
 import botstatuswidget
 import arduinostatuswidget
 import arduino_decode as adec
 import dscolors
-import joystick
 import threading
 import time
 from utils import *
@@ -342,6 +351,7 @@ class DriveStation(tk.Frame):
             btns = self.joystick_device.get_buttons()
             xyz = self.joystick_device.get_axis()
             ruv = self.joystick_device.get_ruv()
+            hats = self.joystick_device.get_hat()
             haveconnection = self.joystick_device.is_connected()
             if haveconnection: 
                 self.joystick_ui.set_mode('active')
@@ -349,9 +359,10 @@ class DriveStation(tk.Frame):
             else: 
                 self.joystick_ui.set_mode('invalid')
                 self.hwstatus.set_status("Joystick", dscolors.status_error)
-            self.joystick_ui.set_axis(*xyz)
+            self.joystick_ui.set_axis(*xyz, axis=0)
             self.joystick_ui.set_ruv(*ruv)
             self.joystick_ui.set_buttons(*btns)
+            #self.joystick_ui.set_hats(*hats)
             if self.mqtt:
                 self.send_loop_cmd()
                 # send out joystick values to robot here...

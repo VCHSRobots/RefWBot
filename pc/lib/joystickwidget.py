@@ -111,9 +111,10 @@ class JoystickWidget(tk.Frame):
                     outline=dscolors.indicator_invalid_bg)
             self.set_statustext(text="Joystick Not Found", color="red")
 
-    def set_axis(self, *args):
+    def set_axis(self, *args, axis=0):
         ''' Sets the axis values for x, y, z directions. 0-3 values can be given.
         Axis values range from -1.0 to 1.0 '''
+        #TODO: axis parameter does nothing as of now
         if len(args) >= 3:
             self._joyaxis = args[:3]
         elif len(args) == 2:
