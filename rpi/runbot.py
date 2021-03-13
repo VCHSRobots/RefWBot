@@ -10,6 +10,8 @@ import mqttrobot
 import pca9685 as pca
 import arduino_wb
 import busmonitor 
+import hydromotor
+import utils
 import time
 
 dstimeout = 3.0  # number of seconds before kill due to no msg received from driver station
@@ -49,6 +51,12 @@ class WaterBot():
       self.xyz = (0.0, 0.0, 0.0)
       self.ruv = (0.0, 0.0, 0.0)
       self.buttons = (False for _ in range(12))
+      # ------------------
+      # Create actuators and sensors here...s
+      self.left_motor = hydromotor.HydroMotor(self.pca, 4)
+      self.right_motor = hydromotor.HydroMotor(self.pca, 5)
+      self.hydrodrive = hydromotor.HydroDrive(self.left_motor, self.right_motor)
+      self.hydrodrive.shutdown()
 
   # -------------------------------------------------------------------
   # Callback Functions
@@ -219,6 +227,7 @@ class WaterBot():
       # Kill all motors and actuators here...
       if self.hw_okay:
         try:
+          self.hydrodrove.shutdown()
           self.pca.killall()
         except:
           pass
@@ -233,6 +242,7 @@ class WaterBot():
     if loop_count == 0:
       # Initialize stuff here...
       print("**** Switching to Auto")
+      self.pca.killall()
     pass
 
   def run_teleop(self, loop_count, time_to_go):
@@ -245,10 +255,10 @@ class WaterBot():
     if loop_count == 0:
       #initalize stuff here...
       print("**** Switching to TeleOp")
-    _, y, _ = self.xyz 
-    self.pca.set_servo(15, y)
-    if self.buttons[2]:
-      raise Exception("Test Termination of Program...")
+      self.hydrodrive.start()
+    x, y, z = self.xyz 
+    self.pca.set_servo(15, z)
+    self.hydrodrive.move(x, y)
 
 if __name__ == "__main__":
     wb = WaterBot()
