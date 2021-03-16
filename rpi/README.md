@@ -70,4 +70,4 @@ https://www.raspberrypi.org/documentation/remote-access/vnc/
 6. The PCA9685 Module requires an address.  For the reference design it is set to 0x4C. You must set that address on the module itself by using a soldering iron to "jump" the correct Address bits (A5, A4, A3, A2, A1).  To get the 0x4C address, you must jump A3 and A4.  A3 and A4 provide the 'C' in the 0x4C.  The 4 in '0x4C' is automatically enabled by the chip (which means the default address of the chip is 0x40). Look carefully at a completed example to see how this is done.
 
 ### Schematic of Bot's Control System
-![schematic](RPiHardware.PNG)
+![cannot find it](../IOBoardSchematic.PNG)
