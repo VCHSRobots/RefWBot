@@ -11,7 +11,7 @@ Raspberry Pi for overall management of the robot, and an IO board that provides
 PWM and digital output, and sensor inputs from other electronic components on
 the robot.
 
-A block diagram of how such a Srobot could be wired up is shown below.  Also 
+A block diagram of how such a robot could be wired up is shown below.  Also 
 shown below is a schematic of the IO board that this control system uses.
 
 Note that we have PCBs for the IO board, if you are interested.  (Also shown below.)
