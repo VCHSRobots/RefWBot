@@ -16,11 +16,20 @@
  * Although this code is to be used as a reference, some things probably should be left 
  * alone.  Here is the "fixed" setup:
  * 
- *    A0  -- Analong input battery monitor
- *    D2  -- Output LED for battery monitor
+ *    A0  -- Analog input for battery voltage -- Motor Battery
+ *    A1  -- Analog input for battery voltage -- Logic Battery
  *    A4  -- SDA to Raspberry pi (via level shifter)
  *    A5  -- SCL to Raspberry pi (via level shifter)
- *    D12 -- LED to show Raspberry comm action
+ *    D2  -- Aux input from PI (called pi_D0)
+ *    D13 -- Aux input from PI (called pi_D1)
+ *    D12 -- LED to battery status
+ * 
+ *   *********************** WARNING!!! ***********************
+ *   The hardware setup above is for the new PCB version, and the schematic 
+ *   dated March 2021.  The older version of the wiring had D2 for output LED for 
+ *   battery monitor and D12 was used to show Raspberry comm action.  Aux connections
+ *   to the Raspberry pi did not exist. If you are using an older version of the
+ *   wiring, make pin changes below.  
  * 
  * I2C Particulars
  * ---------------
@@ -33,7 +42,7 @@
  *      Name      Addr      R/W?  Purpose/Usage
  *      --------  ----      ----  -------------   */
 #define REG_SIGV     0   // RO  Device Signature/Version.  Currently: 'e'
-#define REG_BAT      1   // RO  Battery Voltage (in units of 10ths of volts)
+#define REG_BAT_M    1   // RO  Battery Voltage of Motor battery (in units of 10ths of volts)
 #define REG_DTME1    2   // RO  Device Time, Milliseconds, Byte 0, MSB
 #define REG_DTME2    3   // RO  Device Time, Milliseconds, Byte 1
 #define REG_DTME3    4   // RO  Device Time, Milliseconds, Byte 2
@@ -52,33 +61,41 @@
 #define REG_XXX0    17   // RW  Spare 1
 #define REG_XXX1    18   // RW  Spare 2
 #define REG_XXX2    19   // RW  Spare 3
-#define REG_LAST    19   // ** Last Registor
+#define REG_BAT_L   20   // RO  Battery Voltage of Logic battery (in units of 10ths of volts) 
+#define REG_LAST    20   // ** Last Registor
 #define REG_RW0     13   // ** First Registor where writing is allowed.
 
 #include <Wire.h>
 
 int ardunio_ic2_addr = 0x8;  // Sets the address of this arduino for the RPi to access
-int bat_input_pin = A0;
-int bat_monitor_pin = 2;
-int pi_restart_cmd_pin = 12;   // Signal from PI to restart
-int pi_intr_pin = 13;         
+int bat_motor_input_pin = A0;
+int bat_logic_input_pin = A1;
+int bat_led_status_pin = 12;    // Was 2 
+// Next two pins can receive signals from PI
+int pi_d0_pin = 2;   
+int pi_d1_pin = 13;         
 
 volatile long timenext;
 volatile long timenow;
 volatile long timelastcomm;
-volatile float batvolts = 12.0;
-volatile byte regs[20];
+volatile byte regs[REG_LAST + 1];
 volatile int regaddr = 0;
 volatile long sendcnt = 0;
 volatile long reccnt = 0;
 volatile long badmsgcount = 0;
+volatile float batvolts_motor = 12.0;
+volatile float batvolts_logic = 12.0;
 
 // --------------------------------------------------------------------
 // setup() 
 // Called on startup by the "os".
 void setup() {
-  pinMode(bat_monitor_pin, OUTPUT);
-  pinMode(pi_intr_pin, OUTPUT);
+  pinMode(bat_motor_input_pin, INPUT);  // Analog input
+  pinMode(bat_logic_input_pin, INPUT);  // Analog input
+  pinMode(bat_led_status_pin, OUTPUT);
+  digitalWrite(bat_led_status_pin, HIGH);
+  pinMode(pi_d0_pin, INPUT_PULLUP);
+  pinMode(pi_d1_pin, INPUT_PULLUP);
   pinMode(3, INPUT_PULLUP);
   pinMode(4, INPUT_PULLUP);
   pinMode(5, INPUT_PULLUP);
@@ -88,12 +105,10 @@ void setup() {
   pinMode(9, OUTPUT);
   pinMode(10, OUTPUT);
   pinMode(11, OUTPUT);
-  pinMode(pi_restart_cmd_pin, INPUT_PULLUP);
   analogWrite(9, 0);
   analogWrite(10, 0);
   analogWrite(11, 0);
-  digitalWrite(bat_monitor_pin, HIGH);
-  digitalWrite(pi_intr_pin, LOW);
+
   Wire.begin(ardunio_ic2_addr);
   Wire.onReceive(receivePiCmd);
   Wire.onRequest(sendPiData);
@@ -144,7 +159,7 @@ void receivePiCmd(int msglen) {
     badmsgcount++;
     return;
   }
-  if (regaddr < REG_RW0) {
+  if (regaddr < REG_RW0 || regaddr == REG_BAT_L) {
     // Trying to write into a read only reg.  Ignore this.
     return;
   }
@@ -171,7 +186,7 @@ void receivePiCmd(int msglen) {
 // with the I2C bus (on our side), and we must fix it by restarting.
 long tme_rst_past = 0;
 void pi_restart() {
-    if (digitalRead(pi_restart_cmd_pin) == LOW) {
+    if (digitalRead(pi_d0_pin) == LOW) {
       if (timenow - tme_rst_past > 5000) {
         tme_rst_past = timenow;
           Serial.println("*** Restart command detected from RPi,");
@@ -189,8 +204,13 @@ volatile byte timesend[4];
 void sendPiData() {
   sendcnt++;
   if (regaddr == REG_SIGV) {Wire.write('e'); return; }
-  if (regaddr == REG_BAT) {
-    int i = batvolts * 10;
+  if (regaddr == REG_BAT_M) {
+    int i = batvolts_motor * 10;
+    Wire.write(i); 
+    return;
+  }
+  if (regaddr == REG_BAT_L) {
+    int i = batvolts_logic * 10;
     Wire.write(i); 
     return;
   }
@@ -214,10 +234,13 @@ void sendPiData() {
 // pi_comm()
 // Casues a LED to blink at a human readable rate when communication
 // happens between the RPi and the Arduino.
+//
+// NOTE: the circuit has been changed -- the LED no longer exists,
+// Therefore the write have been commented out.
 int comcount = 0;
 void pi_comm() {
   if (timenow - timelastcomm > 200) {
-    digitalWrite(pi_intr_pin, LOW);
+    // digitalWrite(pi_intr_pin, LOW);
     comcount = 0;
     return;
   }
@@ -225,11 +248,11 @@ void pi_comm() {
   if (comcount > 20) {
     comcount = 0;
   }
-  if (comcount < 10) {
-    digitalWrite(pi_intr_pin, HIGH);
-  } else {
-    digitalWrite(pi_intr_pin, LOW);
-  }  
+  // if (comcount < 10) {
+  //  digitalWrite(pi_intr_pin, HIGH);
+  // } else {
+  //  digitalWrite(pi_intr_pin, LOW);
+  // }  
 }
 
 // --------------------------------------------------------------------
@@ -244,33 +267,39 @@ void monitor_battery() {
   if (batcount >= 100) {
     // Read the voltage once every second...
     batcount = 0;
-    int bv = analogRead(bat_input_pin);  // Requires about .1 ms to read.
-    batvolts = bv * 16.0 / 1024.0;  // Where 15.92 = Full range in volts
+    int bv = analogRead(bat_motor_input_pin);  // Requires about .1 ms to read.
+    batvolts_motor = bv * 16.0 / 1024.0;  // Where 15.92 = Full range in volts
+    regs[REG_BAT_M] = bv;
+    bv = analogRead(bat_logic_input_pin); // Requires about .1 ms to read.
+    batvolts_logic = bv * 16.0 / 1024.0;  // Where 15.92 = Full range in volts
+    regs[REG_BAT_L] = bv;
   }
-  if (batvolts > 10.5) {
-    digitalWrite(bat_monitor_pin, HIGH);
+  if (batvolts_motor > 10.5 && batvolts_logic > 10.5) {
+    digitalWrite(bat_led_status_pin, HIGH);
     batblink = 0;
   } else {
     if (batblink >= battopcount) batblink = 0;
+    float minbat = batvolts_motor;
+    if (batvolts_logic < minbat) minbat = batvolts_logic;
     if (batblink == 0) {
       // Calculate blink rate...
-      float v = batvolts - 9.0;
+      float v = minbat - 9.0;
       if (v < 0.0) v = 0.0;
       if (v > 1.5) v = 1.5;
       battopcount = (v * 200.0) + 16;
     }
     batblink += 1;
-    if (batvolts < 9.5) {
-      if (batblink < 8) {
-        digitalWrite(bat_monitor_pin, HIGH);
+    if (minbat < 9.5) {
+      if (minbat < 8) {
+        digitalWrite(bat_led_status_pin, HIGH);
       } else {
-        digitalWrite(bat_monitor_pin, LOW);
+        digitalWrite(bat_led_status_pin, LOW);
       }
     } else {
-      if (batblink < 10) {
-        digitalWrite(bat_monitor_pin, LOW);
+      if (minbat < 10) {
+        digitalWrite(bat_led_status_pin, LOW);
       } else {
-        digitalWrite(bat_monitor_pin, HIGH);
+        digitalWrite(bat_led_status_pin, HIGH);
       }      
     }
   }
@@ -288,7 +317,7 @@ byte read_digital_inputs() {
       v = ((v << 1) & 0xFE) | 0x01;
     }
   }
-  if (digitalRead(pi_restart_cmd_pin) == HIGH) v = v | 0x80;
+  if (digitalRead(pi_d0_pin) == HIGH) v = v | 0x80;
   return v;
 }
 
@@ -350,7 +379,8 @@ void report_status() {
     sprintf(strbuf, "Last Time Report = %02x %02x %02x %02x (hex)", timesend[0], timesend[1], timesend[2], timesend[3]);
     Serial.println(strbuf);
 
-    Serial.print("Bat Voltage = "); Serial.println(batvolts);
+    Serial.print("Battery Voltages:  Motors = "); Serial.print(batvolts_motor);
+    Serial.print("   Logic = "); Serial.println(batvolts_logic);
 
     sprintf(strbuf, "ADC [1,2,3,6,7] = %3d %3d %3d %3d %3d", 
       regs[REG_A1], regs[REG_A2], regs[REG_A3], regs[REG_A6], regs[REG_A7]);

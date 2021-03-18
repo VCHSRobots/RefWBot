@@ -185,9 +185,14 @@ class Joystick():
     def get_axis(self, axis_number=0):
         ''' Returns a list of three floats (-1 to +1) describing the joystick's XYZ axis.
         If there is an error or the joystick is not connected or the axis doesn't exist,
-        zeros are returned. '''
+        zeros are returned. The argument axis_number (default 0) specifies which axis. If the 
+        axis does not exist, zeros are returned. '''
         if not self._is_inited: self.reset()
         if not self._is_inited: 
+            return [0, 0, 0]
+        if axis_number == 1:
+            return self.get_ruv()
+        if axis_number != 0:
             return [0, 0, 0]
         okay, info = js.joyGetPosEx(self._id)
         if not okay:
@@ -212,3 +217,9 @@ class Joystick():
             return [0.0, 0.0, 0.0]
         r, u, v = (info.dwRpos - 32678)/32768.0, (info.dwUpos - 32678)/32768.0, (info.dwVpos - 32678)/32768.0
         return (r, u, v)
+
+    def get_hat(self, hat=0):
+        ''' Returns the x-y position of the joystick's hat. Only applicable to the XBox Controller
+        If there is an error, the joystick is not connected, or the joystick does not have a hat,
+        zeros are returned. '''
+        return [0, 0]

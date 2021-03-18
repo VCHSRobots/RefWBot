@@ -10,7 +10,6 @@ if len(sys.argv) < 3:
 	print("setreg -- set a register in the ardunio using the i2c bus.\n")
 	print("Usage: setreg reg-name  data\nwhere reg-name is one of the following names,")
 	print("and data is a number (0-255).\n")  
-	print("Possible names: ")
 	i = 0
 	snames = ""
 	allnames = reg.get_reg_names()
@@ -26,7 +25,7 @@ rnum = reg.name2adr(regname)
 if rnum < 0:
 	print("%s is an unknown registor." % regname)
 	sys.exit()
-if rnum < reg.RW0:
+if rnum < reg.RW0 or rnum == reg.BAT_L:
 	print("%s is a read-only registor." % regname)
 	sys.exit()
 if rnum > reg.LAST:

@@ -234,8 +234,8 @@ class DriveStation(tk.Frame):
         self.hwstatus.set_status("I2C Bus", dscolors.status_error)
         self.hwstatus.set_status("Bat M", dscolors.status_error)
         self.hwstatus.set_status("Bat L", dscolors.status_error)
-        self.botstatus.set_field("Bat1", "---")
-        self.botstatus.set_field("Bat2", "---")
+        self.botstatus.set_field("Bat M", "---")
+        self.botstatus.set_field("Bat L", "---")
         self.botstatus.set_field("I2CErrs", "---")
         self.botstatus.set_field("Restarts", "---")
         return
@@ -286,16 +286,19 @@ class DriveStation(tk.Frame):
       if timenow - self.last_arduino_ui_update < 1.0: return
       self.last_arduino_ui_update = timenow
       if timenow - self.last_arduino_status > 4.0 or self.arduino_data == None:
-        self.botstatus.set_field("Bat1", "---")
-        self.botstatus.set_field("Bat2", "---")
+        self.botstatus.set_field("Bat M", "---")
+        self.botstatus.set_field("Bat L", "---")
         self.arduinostatus.set_all_fields("---")
         return
       d = adec.data_to_dict(self.arduino_data)
-      if "BAT" in d:
-        self.botstatus.set_field("Bat1", "%5.1f" % d["BAT"])
+      if "BAT_M" in d:
+        self.botstatus.set_field("Bat M", "%5.1f" % d["BAT_M"])
       else:
-        self.botstatus.set_field("Bat1", "---")
-      self.botstatus.set_field("Bat2", "0.0")
+        self.botstatus.set_field("Bat M ", "---")
+      if "BAT_L" in d:
+        self.botstatus.set_field("Bat L", "%5.1f" % d["BAT_L"])
+      else:
+        self.botstatus.set_field("Bat L ", "---")
       if "SIGV" in d: 
         self.arduinostatus.set_field("Sigv", "%c" % d["SIGV"])
       else: 

@@ -106,12 +106,30 @@ class Arduino_wb():
         tt = decode.fourbytestolong(u3, u2, u1, u0)
         return True, tt
 
-    def get_battery_voltage(self):
+    def get_battery_voltage(self, battype="M"):
         ''' Returns the battery voltage from the arduino as 
         (okayflag, batvolts) where okayflag is True if all is okay,
-        and batvolts is the battery voltage as a float.'''
+        and batvolts is the battery voltage.  For robots with multiple
+        batteries, the battype selects which battery: "M" for
+        motors, or "L" for logic.'''
+        r = 0
+        if battype == "M": r = reg.BAT_M
+        if battype == "L": r = reg.BAT_L
+        if r == 0:
+            raise ValueError("Unknown battery type.")
         try:
-            batv = self.readreg(reg.BAT)
+            batv = self.readreg(r)
+        except IOError:
+            return False, 0.0
+        batv = batv / 10.0
+        return True, batv
+
+    def get_battery_voltage_motors(self):
+        ''' Returns the battery voltage for the motors from the arduino as 
+        (okayflag, batvolts) where okayflag is True if all is okay,
+        and batvolts is the battery voltage for the motors as a float.'''
+        try:
+            batv = self.readreg(reg.BAT_M)
         except IOError:
             return False, 0.0
         batv = batv / 10.0
@@ -228,9 +246,9 @@ class Arduino_wb():
         and bytes is a list of byte values. '''
         d = []
         try:
-            for i in range(reg.LAST + 1):
+            for i in range(reg.LAST_V2 + 1):
                 v = self.readreg(i)
                 d.append(v)
         except:
-            return (False, [0 for _ in range(reg.LAST + 1)])
+            return (False, [0 for _ in range(reg.LAST_V2 + 1)])
         return True, d

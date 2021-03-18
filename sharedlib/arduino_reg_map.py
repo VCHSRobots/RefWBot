@@ -3,7 +3,7 @@
 
 # This table should match the code in the arduino.
 SIGV    =  0   #  RO  Device Signature/Version.  Currently: 'e'
-BAT     =  1   #  RO  Battery Voltage (in units of 10ths of volts)
+BAT_M   =  1   #  RO  Battery Voltage for Motors (in units of 10ths of volts)
 DTME1   =  2   #  RO  Device Time, Milliseconds, Byte 0, MSB
 DTME2   =  3   #  RO  Device Time, Milliseconds, Byte 1
 DTME3   =  4   #  RO  Device Time, Milliseconds, Byte 2
@@ -22,8 +22,10 @@ PWM11   = 16   #  RW  PWM Output on D11: 0-255
 XXX0    = 17   #  RW  Spare 1
 XXX1    = 18   #  RW  Spare 2
 XXX2    = 19   #  RW  Spare 3
-LAST    = 19   #  ** Last Registor
-RW0     = 13   #  ** First Registor where writing is allowed.
+LAST    = 19   #  ** Last Registor (OLD Version)
+BAT_L   = 20   #  RO Battery Voltage for Logic (in units of 10ths of volts)
+LAST_V2 = 20   #  ** Last Registor (Newer Version)
+RW0     = 13   #  ** First Registor where writing is allowed. (except for BAT_L)
 
 # One feature of the arduino code is that it keeps track if a digital input
 # changes on D3-D8.  This is reported in REG_SC.  Note that any change
@@ -38,10 +40,11 @@ RW0     = 13   #  ** First Registor where writing is allowed.
 # that lasts at least 10 msec. Pulses less than 10 msec in width may or may
 # not be captured.
 
-reg_table = ((SIGV,"SIGV"), (BAT,"BAT"), (DTME1,"DTME1"), (DTME2,"DTME2"),
+reg_table = ((SIGV,"SIGV"), (BAT_M,"BAT_M"), (DTME1,"DTME1"), (DTME2,"DTME2"),
     (DTME3,"DTME3"), (DTME4,"DTME4"), (A1,"A1"), (A2,"A2"), (A3,"A3"),
     (A6, "A6"), (A7,"A7"), (SI,"SI"), (SC,"SC"), (SCC,"SCC"), (PWM9,"PWM9"),
-    (PWM10,"PWM10"), (PWM11,"PWM11"), (XXX0,"XXX0"), (XXX1,"XXX1"), (XXX2,"XXX2"))
+    (PWM10,"PWM10"), (PWM11,"PWM11"), (XXX0,"XXX0"), (XXX1,"XXX1"), (XXX2,"XXX2"),
+    (BAT_L,"BAT_L"))
 
 analog_chans = (A1, A2, A3, A6, A7)
 pwm_chans = (PWM9, PWM10, PWM11)

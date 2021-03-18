@@ -19,9 +19,11 @@ def print_status():
 	u0, u1, u2, u3 = blist
 	tt = decode.fourbytestolong(u3, u2, u1, u0)
 	print("Device Time = %d  (%02x %02x %02x %02x)" % (tt, u0, u1, u2, u3))
-	okay, batv = a.get_battery_voltage()
+	okay, bat_m = a.get_battery_voltage(battype="M")
 	if not okay: return False
-	print("Battery Voltage = %4.1f" % batv)
+	okay, bat_l = a.get_battery_voltage(battype="L")
+	if not okay: return False
+	print("Batterys: Motors = %4.1f, Logic = %4.1f" % (bat_m, bat_l))
 	return True
 
 def print_analogs():

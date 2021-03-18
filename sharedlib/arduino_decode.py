@@ -35,22 +35,28 @@ def data_to_dict(strdata):
     dout = {}
     if len(data) >= reg.SIGV:
         dout["SIGV"] = "%c" % data[reg.SIGV]
-    if len(data) >= reg.BAT:
-        dout["BAT"] = dat_to_battery_voltage(data[reg.BAT])
-    if len(data) >= reg.DTME4:
+    if len(data) > reg.BAT_M:
+        dout["BAT_M"] = dat_to_battery_voltage(data[reg.BAT_M])
+    else:
+        dout["BAT_M"] = 0.0
+    if len(data) > reg.BAT_L:
+        dout["BAT_L"] = dat_to_battery_voltage(data[reg.BAT_L])
+    else:
+        dout["BAT_L"] = 0.0
+    if len(data) > reg.DTME4:
         u0, u1, u2, u3 = data[reg.DTME1], data[reg.DTME2], data[reg.DTME3], data[reg.DTME4]
         dout["DTME"] = fourbytestolong(u3, u2, u1, u0)
-    if len(data) >= reg.A1:
+    if len(data) > reg.A1:
         dout["A1"] = data[reg.A1] / 255.0
-    if len(data) >= reg.A2:
+    if len(data) > reg.A2:
         dout["A2"] = data[reg.A2] / 255.0
-    if len(data) >= reg.A3:
+    if len(data) > reg.A3:
         dout["A3"] = data[reg.A3] / 255.0
-    if len(data) >= reg.A6:
+    if len(data) > reg.A6:
         dout["A6"] = data[reg.A6] / 255.0
-    if len(data) >= reg.A7:
+    if len(data) > reg.A7:
         dout["A7"] = data[reg.A7] / 255.0
-    if len(data) >= reg.SI:
+    if len(data) > reg.SI:
         dout["SI"] = data[reg.SI]
         dout["D3"] = bit_to_bool(data[reg.SI], 0)
         dout["D4"] = bit_to_bool(data[reg.SI], 1)
@@ -58,15 +64,15 @@ def data_to_dict(strdata):
         dout["D6"] = bit_to_bool(data[reg.SI], 3)
         dout["D7"] = bit_to_bool(data[reg.SI], 4)
         dout["D8"] = bit_to_bool(data[reg.SI], 5)
-    if len(data) >= reg.SC:
+    if len(data) > reg.SC:
         dout["SC"] = data[reg.SC]
-    if len(data) >= reg.SCC:
+    if len(data) > reg.SCC:
         dout["SCC"] = data[reg.SCC]
-    if len(data) >= reg.PWM9:
+    if len(data) > reg.PWM9:
         dout["PWM9"] = data[reg.PWM9] / 255.0 
-    if len(data) >= reg.PWM10:
+    if len(data) > reg.PWM10:
         dout["PWM10"] = data[reg.PWM10] / 255.0 
-    if len(data) >= reg.PWM11:
+    if len(data) > reg.PWM11:
         dout["PWM11"] = data[reg.PWM11] / 255.0 
     return dout
     

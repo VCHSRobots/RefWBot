@@ -11,7 +11,7 @@ horz_px, vert_px = 210, 150 # size of canvas
 lineheight = 18 # height between fields
 namewidth = 110  # size of the field name
 xmargin = 2 # x margin for start of field name
-fields = ("Bat1", "Bat2", "I2CErrs", "Restarts")
+fields = ("Bat M", "Bat L", "I2CErrs", "Restarts")
 
 class BotStatusWidget(tk.Frame):
     def __init__(self, parent):

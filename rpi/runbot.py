@@ -154,12 +154,13 @@ class WaterBot():
       print("")
       print("Robot Mode: %s" % self.botmode)
       print("Robot Time: %12.3f   Time_to_go: %6.1f" % (time.monotonic(), self.time_to_run))
-      bat1 = bat2 = 0.0
+      bat_m = bat_l = 0.0
       if self.hw_okay:
-          _, bat1 = self.arduino.get_battery_voltage()
+        _, bat_m = self.arduino.get_battery_voltage(battype="M")
+        _, bat_l = self.arduino.get_battery_voltage(battype="L")
       print("Hardware okay: %s   i2c errors = %d  restarts = %d" % (self.hw_okay, 
         self.bus_monitor.get_total_error_count(), self.restart_count))
-      print("Main Battery: %6.1f volts,  Logic Battery: %6.1f" % (bat1, bat2) )
+      print("Main Battery: %6.1f volts,  Logic Battery: %6.1f" % (bat_m, bat_l) )
       print("Connected to MQTT: %s" % self.mqtt.is_connected())
       mqttcounts = self.mqtt.get_counts()
       print("MQTT messages received: %d " % mqttcounts["rx"])
@@ -178,12 +179,13 @@ class WaterBot():
       timenow = time.monotonic()
       if timenow - self.last_report_time_to_ds < 1.000: return
       self.last_report_time_to_ds = timenow
-      bat1 = bat2 = 0.0
+      bat_m = bat_l = 0.0
       if self.hw_okay:
-        _, bat1 = self.arduino.get_battery_voltage()
+        _, bat_m = self.arduino.get_battery_voltage(battype="M")
+        _, bat_l = self.arduino.get_battery_voltage(battype="L")
       i2c = self.bus_monitor.get_total_error_count()
       s = "%s %d %s %6.1f %6.1f %d %d" % ("okay", self.ds_loop_count, 
-        self.hw_okay, bat1, bat2, i2c, self.restart_count)
+        self.hw_okay, bat_m, bat_l, i2c, self.restart_count)
       self.mqtt.publish("wbot/status", s)
       if self.hw_okay:
         try:
@@ -227,7 +229,7 @@ class WaterBot():
       # Kill all motors and actuators here...
       if self.hw_okay:
         try:
-          self.hydrodrove.shutdown()
+          self.hydrodrive.shutdown()
           self.pca.killall()
         except:
           pass
