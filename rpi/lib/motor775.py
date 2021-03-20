@@ -1,6 +1,5 @@
 # motor775.py -- driver for 775 motor
 # IK March 2021
-
 #
 # Note, the motor should be off at a pulsewidth of
 # 1500 usec, as shown below.  However your motor might
