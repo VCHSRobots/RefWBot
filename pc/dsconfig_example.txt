@@ -17,3 +17,4 @@ LogicBatteryWarning = 7.375
 LogicBatteryError = 7.0
 MotorBatteryWarning = 10.75
 MotorBatteryError = 9.5
+NumJoysticks = 1

@@ -93,7 +93,6 @@ class Joystick():
 
     def _findjoystick(self):
         ''' Attemps to find the proper joystick's system id '''
-        if self._id >= 0: return
         joylist = get_devices()
         if self._desired_midpid != (0, 0):
             for i in range(len(joylist)):
@@ -105,18 +104,22 @@ class Joystick():
                     self._id = i
                     self.joy = joy
                     return
+        if self._id >= 0:
+            joy = joylist[self._id]
+            self.joy = joy
+            joy.init()
+            return
         if len(joylist) > 0:
             self._id = 0
             self.joy = joylist[0]
-            joy.init()
+            self.joy.init()
+            return
         
     def reset(self):
         ''' Attempts to reconnect and re-init the joystick.'''
         if self.joy is not None:
             self.joy.quit()
-        if self._id < 0:
-            self._findjoystick()
-            if self._id < 0: return
+        self._findjoystick()
         self._is_inited = True
         self._name = self._style
         self._numbtns = self.joy.get_numbuttons()
