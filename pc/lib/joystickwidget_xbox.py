@@ -135,13 +135,14 @@ class JoystickWidget(tk.Frame):
         ''' Sets the axis values for x, y, z directions. 0-3 values can be given.
         Axis values range from -1.0 to 1.0 '''
         if len(args) >= 3:
-            self._joyaxis = args[:4]
+            x, y, z = -args[0], -args[1], args[2]
+            self._joyaxis = (x, y, z)
         elif len(args) == 2:
-            x, y = args
+            x, y = -args[0], -args[1]
             z = self._joyaxis[2]
             self._joyaxis = (x, y, z)
         elif len(args) == 1:
-            x = args[0]
+            x = -args[0]
             y, z = self._joyaxis[1], self._joyaxis[2]
             self._joyaxis = (x, y, z)
         else:
@@ -151,7 +152,7 @@ class JoystickWidget(tk.Frame):
 
     def set_ruv(self, *args):
         ''' Redirect to set_axis function '''
-        self.set_axis(args, axis=1)
+        self.set_axis(*args, axis=1)
 
     def set_buttons(self, *buttons):
         ''' Sets the button states on the joystick display.

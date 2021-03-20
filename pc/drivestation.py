@@ -379,7 +379,7 @@ class DriveStation(tk.Frame):
             self.joystick_ui.set_axis(*xyz, axis=0)
             self.joystick_ui.set_ruv(*ruv)
             self.joystick_ui.set_buttons(*btns)
-            #self.joystick_ui.set_hats(*hats)
+            self.joystick_ui.set_hats(*hats)
             if self.mqtt:
                 self.send_loop_cmd()
                 # send out joystick values to robot here...
