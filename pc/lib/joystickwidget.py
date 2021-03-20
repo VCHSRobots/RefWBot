@@ -164,6 +164,10 @@ class JoystickWidget(tk.Frame):
             self._joybtns = tuple(bnew)
         self._showbtns()
 
+    def set_hats(self, *args):
+        ''' Not applicable to Logitech joystick '''
+        pass
+
     def set_statustext(self, text, color="black"):
         ''' Sets the status text under the diagram on the joystick. Note that
         this is the same status text used by the mode feature. '''

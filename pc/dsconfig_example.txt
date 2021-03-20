@@ -11,6 +11,8 @@
 [Robot]
 Title = EPIC Robotz
 TeamName = Ref Bot
+WindowWidth = 300
+WindowHeight = 860
 LogicBatteryWarning = 7.375
 LogicBatteryError = 7.0
 MotorBatteryWarning = 10.75
