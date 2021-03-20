@@ -1,0 +1,17 @@
+# Example Configuration File for the Drive Station
+#
+# Copy this file to dsconfig.txt and edit it to 
+# suit your robot. 
+#
+# The 'dsconfig.txt' file will be read when the
+# drivestation starts and the values found in
+# it will be used instead of the default values
+# writen in the program. 
+
+[Robot]
+Title = EPIC Robotz
+TeamName = Ref Bot
+LogicBatteryWarning = 7.375
+LogicBatteryError = 7.0
+MotorBatteryWarning = 10.75
+MotorBatteryError = 9.5

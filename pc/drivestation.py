@@ -9,6 +9,7 @@ elif platform.system() == "Linux":
   import joystick_linux as joystick
 
 import sys
+import configparser
 import tkinter as tk
 import tkinter.font as tkFont
 import mqttrobot
@@ -27,16 +28,32 @@ import threading
 import time
 from utils import *
 
-title = "EPIC ROBOTZ"
-teamname = "Reference Bot"
-wx, wy = 300, 860
+class DSConfiguration():
+  def __init__(self):
+    parser = configparser.ConfigParser()
+    parser["Robot"] = {"TeamName": "EPIC RevBot"}
+    try:
+      parser.read("dsconfig.txt")
+      self.teamname = parser["Robot"]["TeamName"]
+      self.title = parser["Robot"].get("Title", "EPIC Robotz")
+      self.teamname = parser["Robot"].get("TeamName", "Ref Bot")
+      self.wx = parser["Robot"].getint("WindowWidth", 300)
+      self.wy = parser["Robot"].getint("WindowHeight", 860)
+      self.bat_logic_warning = parser["Robot"].getfloat("LogicBatteryWarning", 9.75)
+      self.bat_logic_error = parser["Robot"].getfloat("LogicBatteryError", 9.0)
+      self.bat_motor_warning = parser["Robot"].getfloat("MotorBatteryWarning", 9.75)
+      self.bat_motor_error = parser["Robot"].getfloat("MotorBatteryError", 9.0)
+    except Exception as e:
+      print("Error in configuration file.")
+      print(e)
+      sys.exit()
 
 class DriveStation(tk.Frame):
-
-    def __init__(self, parent, enable_mqtt=True):
+    def __init__(self, parent, config, enable_mqtt=True):
         tk.Frame.__init__(self, parent)
-        
-        # Hardware setup
+        self.config = config
+
+         # Hardware setup
         self.setup_mqtt(enable_mqtt)
         self.bot_status0 = self.bot_status1 = ("", 0)  # Last two bot status msg
         self.joystick_device = joystick.Joystick(style="Logitech 3D")
@@ -51,8 +68,8 @@ class DriveStation(tk.Frame):
         # GUI setup
         self.titlefont = tkFont.Font(family="Copperplate Gothic Bold", size=24)
         self.namefont = tkFont.Font(family="Copperplate Gothic Light", size=20)
-        self.titlelabel = tk.Label(self, text=title, anchor="center", font=self.titlefont)
-        self.namelabel = tk.Label(self, text=teamname, anchor="center", font=self.namefont)
+        self.titlelabel = tk.Label(self, text=self.config.title, anchor="center", font=self.titlefont)
+        self.namelabel = tk.Label(self, text=self.config.teamname, anchor="center", font=self.namefont)
         self.hwstatus = hardwarestatuswidget.HardwareStatusWidget(self)
         self.gameclock = gameclockwidget.GameClockWidget(self)
         self.joystick_ui = joystickwidget.JoystickWidget(self)
@@ -61,6 +78,7 @@ class DriveStation(tk.Frame):
         self.arduinostatus = arduinostatuswidget.ArduinoStatusWidget(self)
 
         # Layout, do it manually to get exactly what we want.
+        wx, wy = self.config.wx, self.config.wy
         y = 5
         self.titlelabel.place(x=0, y=y, width=wx, height=30)
         y += 30
@@ -239,12 +257,12 @@ class DriveStation(tk.Frame):
         self.botstatus.set_field("I2CErrs", "---")
         self.botstatus.set_field("Restarts", "---")
         return
-      bat1 = bat2 = 0.0
+      bat_m = bat_l = 0.0
       try:
-        bat1 = float(words[3])
-        bat2 = float(words[4])
+        bat_m = float(words[3])
+        bat_l = float(words[4])
       except ValueError:
-        bat1 = bat2 = 0.0 
+        bat_m = bat_l = 0.0 
       try: 
         i2cerrs = int(words[5])
       except ValueError:
@@ -253,15 +271,15 @@ class DriveStation(tk.Frame):
         restarts = int(words[6])
       except ValueError:
         restarts = -1
-      if bat1 > 10.75: 
+      if bat_m > self.config.bat_motor_warning: 
         self.hwstatus.set_status("Bat M", dscolors.status_okay)
-      elif bat1 > 9.25:
+      elif bat_m > self.config.bat_motor_error:
         self.hwstatus.set_status("Bat M", dscolors.status_warn)
       else:
         self.hwstatus.set_status("Bat M", dscolors.status_error)
-      if bat2 > 10.75: 
+      if bat_l > self.config.bat_logic_warning: 
         self.hwstatus.set_status("Bat L", dscolors.status_okay)
-      elif bat2 > 9.25:
+      elif bat_l >  self.config.bat_logic_warning:
         self.hwstatus.set_status("Bat L", dscolors.status_warn)
       else:
         self.hwstatus.set_status("Bat L", dscolors.status_error)
@@ -303,10 +321,6 @@ class DriveStation(tk.Frame):
         self.arduinostatus.set_field("Sigv", "%c" % d["SIGV"])
       else: 
         self.arduinostatus.set_field("Sigv", "---")
-      if "BAT" in d: 
-        self.arduinostatus.set_field("Bat", "%5.1f" % d["BAT"])
-      else: 
-        self.arduinostatus.set_field("Bat", "---")
       if "DTME" in d:
         ft = d["DTME"] / 1000.0
         self.arduinostatus.set_field("Time", "%12.3f" % ft)
@@ -412,10 +426,11 @@ if __name__ == "__main__":
         print("MQTT disabled.")
         enable_mqtt = False
 
+    config = DSConfiguration()
     root = tk.Tk()
     root.title("Driver Station for Water Bot")
-    root.geometry("%dx%d" % (wx, wy))
-    ds = DriveStation(root, enable_mqtt=enable_mqtt)
+    root.geometry("%dx%d" % (config.wx, config.wy))
+    ds = DriveStation(root, config, enable_mqtt=enable_mqtt)
     ds.place(x=0, y=0, relwidth=1, relheight=1)
     ds.start_background()
     root.mainloop()
