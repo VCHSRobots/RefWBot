@@ -407,8 +407,8 @@ void report_status() {
     Serial.println(strbuf);
 
     long tdelta = millis() - t0;
-    sprintf(strbuf, "Status Report Time = %l msec", tdelta);
-    Serial.println(tdelta);
+    sprintf(strbuf, "Status Report Time = %ld msec", tdelta);
+    Serial.println(strbuf);
   }
 }
  
