@@ -2,6 +2,8 @@
  * RobotRun -- This code demostrats a basic controller for a water based robot.
  * EPIC Robotz, dlb, Feb 2021
  * 
+ * Version 1.0 -- Fully Working version with reset feature
+ * 
  * The configuration is assumed to be:  PC -> (wifi) -> Raspberry pi -> Ardunio -> Hardware.
  * The Raspberry Pi (pi) and the Ardunio communicate over a SPI connection.
  * 
@@ -20,8 +22,8 @@
  *    A1  -- Analog input for battery voltage -- Logic Battery
  *    A4  -- SDA to Raspberry pi (via level shifter)
  *    A5  -- SCL to Raspberry pi (via level shifter)
- *    D2  -- Aux input from PI (called pi_D0)
- *    D13 -- Aux input from PI (called pi_D1)
+ *    D2  -- Aux input from PI (called pi_D1)
+ *    D13 -- Aux input from PI (called pi_D0)
  *    D12 -- LED to battery status
  * 
  *   *********************** WARNING!!! ***********************
@@ -67,17 +69,21 @@
 
 #include <Wire.h>
 
+void (* resetFunc) (void) = 0;
+
 int ardunio_ic2_addr = 0x8;  // Sets the address of this arduino for the RPi to access
 int bat_motor_input_pin = A0;
 int bat_logic_input_pin = A1;
 int bat_led_status_pin = 12;    // Was 2 
-// Next two pins can receive signals from PI
-int pi_d0_pin = 2;   
-int pi_d1_pin = 13;         
+// Next two pins can receive direct signals from PI
+int pi_d1_pin = 2;
+int pi_d0_pin = 13;   
+         
 
 volatile long timenext;
 volatile long timenow;
 volatile long timelastcomm;
+volatile long timereset;
 volatile byte regs[REG_LAST + 1];
 volatile int regaddr = 0;
 volatile long sendcnt = 0;
@@ -112,7 +118,8 @@ void setup() {
   Wire.begin(ardunio_ic2_addr);
   Wire.onReceive(receivePiCmd);
   Wire.onRequest(sendPiData);
-  timenext = millis() + 10;
+  timereset = millis();      // Time that we restarted
+  timenext = timereset;  // Time to run next loop
   Serial.begin(115200);
   Serial.println("");
   Serial.println("Starting UP! ");
@@ -184,14 +191,15 @@ void receivePiCmd(int msglen) {
 // Here, we monitor the pi restart signal.  This signal is sent
 // on a digital input to inform us that something is very wrong
 // with the I2C bus (on our side), and we must fix it by restarting.
-long tme_rst_past = 0;
+
 void pi_restart() {
-    if (digitalRead(pi_d0_pin) == LOW) {
-      if (timenow - tme_rst_past > 5000) {
-        tme_rst_past = timenow;
-          Serial.println("*** Restart command detected from RPi,");
-          Serial.println("*** (Not implimented here yet.");
-      }
+    // Don't check for reset if we are under 3 seconds since startup 
+    if (timenow - timereset < 3000) return;
+    if (digitalRead(pi_d0_pin) == LOW && digitalRead(pi_d1_pin) == LOW)  {
+      Serial.println("*****  RESTART command detected from RPi.");
+      Serial.println("Attemting restart.");
+      Serial.flush();
+      resetFunc();
     }
 }
 
@@ -307,7 +315,9 @@ void monitor_battery() {
 
 // --------------------------------------------------------------------
 // read_digital_inputs() 
-// Reads the input pins, and assembles the IO Byte: [0, 0, D8, D7, D6, D5, D4, D3]
+// Reads the input pins, and assembles the IO Byte: [p1, p0, D8, D7, D6, D5, D4, D3]
+// Where p0, and p1 are from the Pi, and the D3-D8 bits are from
+// inputs on the arduino itself.
 byte read_digital_inputs() {
   byte v = 0;
   for (int ireg = 8; ireg >= 3; ireg--) {
@@ -317,7 +327,8 @@ byte read_digital_inputs() {
       v = ((v << 1) & 0xFE) | 0x01;
     }
   }
-  if (digitalRead(pi_d0_pin) == HIGH) v = v | 0x80;
+  if (digitalRead(pi_d1_pin) == HIGH) v = v | 0x80;
+  if (digitalRead(pi_d0_pin) == HIGH) v = v | 0x40;
   return v;
 }
 
@@ -398,6 +409,13 @@ void report_status() {
     Serial.println(strbuf);
     
     sprintf(strbuf, "Spare Regs (17-19) = %3d %3d %3d", regs[REG_XXX0], regs[REG_XXX1], regs[REG_XXX2]);
+    Serial.println(strbuf);
+
+    char p0 = 'F';
+    char p1 = 'F';
+    if (digitalRead(pi_d1_pin) == HIGH) p1 = 'T';
+    if (digitalRead(pi_d0_pin) == HIGH) p0 = 'T';
+    sprintf(strbuf, "Raspberry Pi Aux Inputs = %c %c", p1, p0);
     Serial.println(strbuf);
 
     sprintf(strbuf, "Receive/Send counts = %ld, %ld", reccnt, sendcnt);

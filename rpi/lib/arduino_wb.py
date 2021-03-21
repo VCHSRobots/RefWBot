@@ -3,6 +3,7 @@
 
 import sys
 from smbus import SMBus
+import RPi.GPIO as gpio
 import time
 import arduino_reg_map as reg
 import arduino_decode as decode
@@ -11,6 +12,10 @@ import random
 default_addr = 0x8 # bus address of ardunio
 default_bus = 1 # indicates /dev/ic2-1
 
+# The D0 and D1 pins are used to restert the arduino in case of massive failure.
+d1_pin = 7      # aux data pin D1 connected directly to Arduino
+d0_pin = 11     # aux data pin D0 connected directly to Arduino
+
 class Arduino_wb():
     ''' Manages arduino that is embedded in the water bot. '''
     def __init__(self, address=default_addr, bus_number=default_bus, bus_monitor=None):
@@ -18,6 +23,34 @@ class Arduino_wb():
         self._bus_number = bus_number
         self._bus = SMBus(bus_number)
         self._bus_monitor = bus_monitor
+        gpio.setwarnings(False)
+        gpio.setmode(gpio.BOARD)
+        gpio.setup(d0_pin, gpio.OUT)
+        gpio.setup(d1_pin, gpio.OUT)
+        # Do not allow restart on arduino
+        gpio.output(d0_pin, True)
+        gpio.output(d1_pin, True)
+
+    def reset_hardware(self):
+        ''' Forces a soft reboot on the Arduino without using the I2C bus. This
+        can be used to recover from I2C bus errors where the Arduino has locked
+        the I2C bus.  If this command finishes successfully, the arduino's timestamp
+        will have been reset, and it's PWM registers will be set to zero.  This
+        function returns (okayflag, msg) where okayflag will be true if success,
+        otherwise it will be False and msg will have a human readable reason for
+        failure.  This function takes about 60 ms to run.'''
+        gpio.output(d0_pin, False)
+        gpio.output(d1_pin, False)
+        time.sleep(0.035)   # allow time for arduino to read bits and start reset.
+        gpio.output(d0_pin, True)
+        gpio.output(d1_pin, True)
+        time.sleep(0.025)  # allow time for the arduino to boot. (By experiment, it takes 1-2ms.)
+        okay, tme = self.get_timestamp()
+        if not okay: return (False, "Unable to get timestamp after reset.")
+        okay = self.test_health()
+        if not okay: return (False, "Health test fails after reset.")
+        if tme > 1000: return (False, "Timestamp (%ld) too large for reset to have occured." % tme)
+        return (True, "Reset seems to have occurred correctly.")
 
     def writereg(self, regadr, dat):
         ''' Reads a register from the arduino.  This is done without
@@ -177,6 +210,15 @@ class Arduino_wb():
         v = (dat >> ibit) & 0x01
         if v != 0: return True, True
         else: return True, False
+
+    def get_pi_bits(self):
+        ''' Returns the PI data bits as (okayflag, data),  where the least significant 2
+        bits in data are the aux command bits from the Rpi: D1, D0. '''
+        try:
+            dat = self.readreg(reg.SI)
+        except IOError:
+            return False, 0 
+        return True, (dat >> 6) & (0x03)
 
     def clear_change_bits(self):
         ''' Clear all change bits on the digital inputs.  Returns 

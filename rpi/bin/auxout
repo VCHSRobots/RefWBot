@@ -1,0 +1,124 @@
+#! /usr/bin/python3
+# auxout -- controls the auxilary commands to the pi
+# EPIC Robotz, dlb, Feb 2021
+
+# To clear horiable error conditions on the I2C bus, auxulary
+# connections are made between the Pi and the Arduino.  Specifically,
+# these are:
+#
+#     Pi GPIO Pin  7   <--->  Arduino Pin D2
+#     Pi GPIO Pin 11   <--->  Arduino Pin D13
+#
+# The arduino has been programmed to do a hard restart if BOTH
+# of these pins are pulled low for about 10ms.  
+
+import sys
+import time
+import arduino_wb
+import RPi.GPIO as gpio
+ 
+d1_pin = 7
+d0_pin = 11
+
+a = arduino_wb.Arduino_wb()
+
+def resetit():
+    okay, msg = a.reset_hardware()
+    if not okay:
+        print("Failed. %s" % msg)
+    else:
+        print("Success. %s" % msg)
+    return
+ 
+def testit():
+    gpio.setwarnings(False)
+    gpio.setmode(gpio.BOARD)
+    gpio.setup(d0_pin, gpio.OUT)
+    gpio.setup(d1_pin, gpio.OUT)
+    # Test one bit at a time.  Start by setting both pins high to 
+    # avoid restarting the arduino.
+    gpio.output(d0_pin, True)
+    gpio.output(d1_pin, True)
+    time.sleep(0.050)   # allow time for arduino to reed bits and report.
+    okay, bits = a.get_pi_bits()
+    if not okay:
+        print("Bus failure on first read.")
+        return
+    if bits != 3:
+        print("Error on bit value. Expected 3, found %d." % bits)
+        print("Check all wiring from Pi to Arduino through level shifter.")
+        return
+    gpio.output(d1_pin, True)
+    gpio.output(d0_pin, False)
+    time.sleep(0.050)   # allow time for arduino to reed bits and report.
+    okay, bits = a.get_pi_bits()
+    if not okay:
+        print("Bus failure on second read.")
+        return
+    if bits != 2:
+        print("Error on bit value. Expected 2, found %d." % bits)
+        print("Check all wiring from Pi to Arduino through level shifter, but espeically D1.")
+        return
+    gpio.output(d1_pin, False)
+    gpio.output(d0_pin, True)
+    time.sleep(0.050)   # allow time for arduino to reed bits and report.
+    okay, bits = a.get_pi_bits()
+    if not okay:
+        print("Bus failure on 3rd read.")
+        return
+    if bits != 1:
+        print("Error on bit value. Expected 1, found %d." % bits)
+        print("Check all wiring from Pi to Arduino through level shifter, but espeically D0.")
+        return
+    gpio.output(d0_pin, True)
+    gpio.output(d1_pin, True)
+    time.sleep(0.050)   # allow time for arduino to reed bits and report.
+    okay, bits = a.get_pi_bits()
+    if not okay:
+        print("Bus failure on 4th read.")
+        return
+    if bits != 3:
+        print("Error on bit value. Expected 3, found %d." % bits)
+        print("Check all wiring from Pi to Arduino through level shifter.")
+        return
+    print("Test Passes. Wiring for aux command from Pi seems okay!")
+
+def setbits(ibits):
+    if ibits < 0 or ibits > 3:
+        print("Input out-of-range.  Must be 0-3.")
+        return
+    d0 = d1 = 0
+    if ibits & 0x01: d0 = 1
+    if ibits & 0x02: d1 = 1
+    gpio.setwarnings(False)
+    gpio.setmode(gpio.BOARD)
+    gpio.setup(d0_pin, gpio.OUT)
+    gpio.setup(d1_pin, gpio.OUT)
+    gpio.output(d0_pin, d0) 
+    gpio.output(d1_pin, d1)
+    print("Output %d (%d, %d) sent." % (ibits, d1, d0))
+
+if len(sys.argv) < 2:
+    print("auxout -- sends aux commands to the Arduino.")
+    print("usage: auxout cmd")
+    print("where cmd can be an integer between 0-3, which corresponds")
+    print("to the D0 and D1 data bits sent to the Arduino, or it can be")
+    print("RESET which should casue the arduino to reset, or it can be")
+    print("TEST, which tests the aux connection between the Pi and the")
+    print("Arduino.")
+    sys.exit()
+
+arg = sys.argv[1] 
+if arg.lower() == "reset":
+    resetit()
+    sys.exit() 
+if arg.lower() == "test":
+    testit()
+    sys.exit()
+
+try:
+    ibits = int(arg)
+except:
+    print("Invalid argument.")
+    sys.exit()
+setbits(ibits)
