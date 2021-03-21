@@ -125,7 +125,8 @@ First, make sure your current directory is in the right place, then issue the cl
 At this point, you should have a folder under your home directory, named "RefWBot" that contains the reference  code.
 
 ### 10. Install MQTT
-The MQTT protocol is used to communicate between the Driver Station on the PC and the RPi.  We use an implementation of MQTT called mosquetto. A detailed account on how to do this is found here:
+The MQTT protocol is used to communicate between the Driver Station on the PC and the RPi.  We use an implementation of MQTT
+called mosquetto. A detailed account on how to do this is found here:
 https://appcodelabs.com/introduction-to-iot-build-an-mqtt-server-using-raspberry-pi
 
 The commands are:
@@ -203,17 +204,17 @@ Below, are all the commands in condensed form, customized for our use.  Be caref
 	sudo systemctl reboot
 
 Once all this is done, you should see your Raspberry Pi in your WiFi list on your pc.  Select it, and connect
-to it from your pc.  Then open up a terminal (with the cmd program, or a erminal in Visual Code) on your pc,
+to it from your pc.  Then open up a terminal (with the cmd program, or a terminal in Visual Code) on your pc,
 and do:
 	
 	ssh pi@10.0.5.1
 
 This should result in a question about connecting to a host for the first time. Answer "yes".  Then you will
 need to provide the password for your raspberry pi which should be "epic" if you followed the recommendations
-above.  After that the terminal should print something like "pi@waterbot:~ $".  This means you are connected
-to the pi, and it is waiting for you to type a command.
+above.  After that the terminal should print something like "pi@WaterBot:~ $".  This means you are connected
+to the Rpi, and it is waiting for you to type a command.
 
-If you have trouble, after all this, you can edit the /etc/default/hostapd file on the pi, and uncomment these lines:
+If you have trouble, after all this, you can edit the /etc/default/hostapd file on the Rpi, and uncomment these lines:
 
 	DAEMON_CONF="/etc/hostapd/hostapd.conf"
 	DAEMON_OPTS="-dd -t -f /home/pi/hostapd.log"
@@ -327,7 +328,11 @@ without detecting an error.  It's output looks like:
 This will continue until you do control-C. If data errors are found, then something is wrong with the hardware or
 the i2c baudrate -- see step 13.
 
-Another useful program is regdump.  Issue that, and you should get an output similar to:
+Another useful program is regdump.   Do:
+
+	regdump
+
+ and you should get an output similar to:
 
 	Device Id = e
 	Device Time = 1847310  (0e 30 1c 00)
