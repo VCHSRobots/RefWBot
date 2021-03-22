@@ -1,5 +1,12 @@
 # drivestation.py -- Drive Station Program for Reference Water Bot
 # Epic Robotz, dlb, Mar 2021
+#
+# Version 1.0: Fully working with one or two joystick/gamepad inputs.
+#
+# NOTE: This version supports ONE or TWO joysticks/gamepad inputs.
+# The widget layout changes accordingly.  With one joystick, the layout
+# is fully vertical, but with two, the layout has left and right
+# widgets.
 
 #Check what platform we are working on
 import platform
@@ -10,7 +17,10 @@ elif platform.system() == "Linux":
   import joystick_linux as joystick
 
 LOGITECH_STYLE = "Logitech 3D"
-XBOX_STYLE = ""
+XBOX_STYLE = "XBox Gamepad"
+winsize_1_joystick = (270, 860)
+winsize_2_joystick = (530, 700)
+winsize = winsize_1_joystick  # Default
 
 import sys
 import configparser
@@ -18,7 +28,7 @@ import tkinter as tk
 import tkinter.font as tkFont
 import mqttrobot
 import gameclockwidget
-import joystickwidget as joystick_logitech
+import joystickwidget_logitech as joystick_logitech
 import joystickwidget_xbox as joystick_xbox
 import hardwarestatuswidget
 import commstatuswidget
@@ -39,15 +49,13 @@ class DSConfiguration():
       self.teamname = parser["Robot"]["TeamName"]
       self.title = parser["Robot"].get("Title", "EPIC Robotz")
       self.teamname = parser["Robot"].get("TeamName", "Ref Bot")
-      self.wx = parser["Robot"].getint("WindowWidth", 300)
-      self.wy = parser["Robot"].getint("WindowHeight", 860)
       self.bat_logic_warning = parser["Robot"].getfloat("LogicBatteryWarning", 9.75)
       self.bat_logic_error = parser["Robot"].getfloat("LogicBatteryError", 9.0)
       self.bat_motor_warning = parser["Robot"].getfloat("MotorBatteryWarning", 9.75)
       self.bat_motor_error = parser["Robot"].getfloat("MotorBatteryError", 9.0)
-      self.joysticks = parser["Robot"].getint("NumJoysticks", 1)
-      self.logitech_port = parser["Robot"].getint("LogitchPort", -1)
-      self.xbox_port = parser["Robot"].getint("XboxPort", -1)
+      self.number_of_joysticks = parser["Robot"].getint("NumberOfJoysticks", 1)
+      self.joystick_port_1 = parser["Robot"].get("JoystickPort1", "Logitech")
+      self.joystick_port_2 = parser["Robot"].get("JoystickPort2", "XBox")
     except Exception as e:
       print("Error in configuration file.")
       print(e)
@@ -58,27 +66,49 @@ class DriveStation(tk.Frame):
         tk.Frame.__init__(self, parent)
         self.config = config
 
-         # Hardware setup
+         # Setup the Comm and Joysticks
         self.setup_mqtt(enable_mqtt)
         self.bot_status0 = self.bot_status1 = ("", 0)  # Last two bot status msg
-        #Get joystick devices
+        # Get joystick devices
         self.joysticks = []
-        for i in range(self.config.joysticks):
-          if i==self.config.logitech_port:
-            self.joysticks.append(joystick.Joystick(id=i, style="Logitech 3D"))
-          elif i==self.config.xbox_port:
-            self.joysticks.append(joystick.Joystick(id=i, style=XBOX_STYLE))
+        if self.config.number_of_joysticks < 1 or self.config.number_of_joysticks > 2:
+          print("Invalid number of joysticks (%d). Only 1 or 2 allowed." % self.config.number_of_joysticks)
+          print("Please fix configuration file.")
+          sys.exit()
+        if self.config.joystick_port_1 == "Logitech":
+          self.joysticks.append(joystick.Joystick(style=LOGITECH_STYLE))
+        elif self.config.joystick_port_1 == "XBox":
+          self.joysticks.append(joystick.Joystick(style=XBOX_STYLE))
+        else:
+          print("Invalid joystick on port 1 (%s). Valid joysticks are: Logitech or XBox." % 
+            self.config.joystick_port_1)
+          print("Please fix configuration file.")
+          sys.exit()
+        if self.config.number_of_joysticks == 2:
+          if self.config.joystick_port_2 == "Logitech":
+            self.joysticks.append(joystick.Joystick(style=LOGITECH_STYLE))
+          elif self.config.joystick_port_2 == "XBox":
+            self.joysticks.append(joystick.Joystick(style=XBOX_STYLE))
           else:
-            self.joysticks.append(joystick.Joystick(id=i))
-          
+            print("Invalid joystick on port 2 (%s). Valid joysticks are: Logitech or XBox." % 
+              self.config.joystick_port_2)
+            print("Please fix configuration file.")
+            sys.exit()
+        
+        # Setup runtime variables...
         self.ping_setup()
         self.last_cmd_send_time = time.monotonic() - 100.0
         self.last_arduino_status = time.monotonic() - 100.0
         self.last_arduino_ui_update = time.monotonic() - 100.0
         self.arduino_data = None
         self.run_loop_cnt = 0
-
-        # GUI setup
+        self.quitbackgroundtasks = False
+        self.bg_count = 0
+        self.last_btns = []
+        self.last_xyz = []
+        self.last_ruv = []
+        
+        # Setup the GUI...
         self.titlefont = tkFont.Font(family="Copperplate Gothic Bold", size=24)
         self.namefont = tkFont.Font(family="Copperplate Gothic Light", size=20)
         self.titlelabel = tk.Label(self, text=self.config.title, anchor="center", font=self.titlefont)
@@ -88,37 +118,46 @@ class DriveStation(tk.Frame):
         self.commstatus = commstatuswidget.CommStatusWidget(self)
         self.botstatus = botstatuswidget.BotStatusWidget(self)
         self.arduinostatus = arduinostatuswidget.ArduinoStatusWidget(self)
-        self.joystick_ui = []
+        self.joystick_widgets = []
         for joy in self.joysticks:
           if joy._style==LOGITECH_STYLE:
-            self.joystick_ui.append(joystick_logitech.JoystickWidget(self))
+            self.joystick_widgets.append(joystick_logitech.JoystickWidget(self))
           elif joy._style==XBOX_STYLE:
-            self.joystick_ui.append(joystick_xbox.JoystickWidget(self))
+            self.joystick_widgets.append(joystick_xbox.JoystickWidget(self))
           else:
-            print("Unknown joystick of MID of {} and PID of {} detected. Defaulting to Logitech widget".format(joy._midpid[0], joy._midpid[1]))
-            self.joystick_ui.append(joystick_logitech.JoystickWidget(self))
-        #Make sure a joystick widget exists even if no joystick is plugged in
-        if len(self.joystick_ui) < 1:
-           self.joystick_ui.append(joystick_logitech.JoystickWidget(self))
+            print("Unknown joystick of MID/PID of {} {} detected. Defaulting to Logitech widget".format(joy._midpid[0], joy._midpid[1]))
+            self.joystick_widgets.append(joystick_logitech.JoystickWidget(self))
+        if len(self.joystick_widgets) < 1:
+          raise("Internal Consistancy Check Error.  Programming Problem.")
+        if self.config.number_of_joysticks == 1:
+          self.layout_for_one_joystick()
+        elif self.config.number_of_joysticks == 2:
+          self.layout_for_two_joysticks()
+        else:
+          print("Invalid Number of Joysticks!  Fix configuration file.")
+          sys.exit()
+        self.set_mqtt_fields_off() 
 
-        # Layout, do it manually to get exactly what we want.
-        wx, wy = self.config.wx, self.config.wy
+
+    def layout_for_one_joystick(self):
+        ''' Do the layout for one joystick '''
+        wx, wy = winsize
+        xpad = 10 # This is the padding on the left
         y = 5
         self.titlelabel.place(x=0, y=y, width=wx, height=30)
         y += 30
         self.namelabel.place(x=0, y=y, width=wx, height=30)
         y += 40
         w, h = self.hwstatus.get_size()
-        x = int((wx-w)/2)  # Use size of hwstatus to establish x margin for all widgets
+        x = xpad 
         self.hwstatus.place(x=x, y=y, width=w, height=h)
         y += h + 10
         w, h = self.gameclock.get_size()
         self.gameclock.place(x=x, y=y, width=w, height=h)
         y += h + 10
-        w, h = self.joystick_ui[0].get_size()
-        self.joystick_ui[0].place(x=x, y=y, width=w, height=h)
-        joystick_y = y
-        joystick_x = x
+        joystk = self.joystick_widgets[0]
+        w, h = joystk.get_size()
+        joystk.place(x=x, y=y, width=w, height=h)
         y += h + 10
         w, h = self.commstatus.get_size()
         self.commstatus.place(x=x, y=y, width=w, height=h)  
@@ -129,17 +168,42 @@ class DriveStation(tk.Frame):
         else: y += h + 10
         w, h = self.arduinostatus.get_size()
         self.arduinostatus.place(x=x, y=y, width=w, height=h)
-        for joy_widget in self.joystick_ui[1:]:
-          joystick_x += joy_widget.get_size()[0]+1
-          w, h = joy_widget.get_size()
-          joy_widget.place(x=joystick_x, y=joystick_y, width=w, height=h)
+  
+    def layout_for_two_joysticks(self):
+        ''' Do the layout for two joysticks '''
+        wx, wy = winsize
+        xpad = 10 # This is the padding on the left
+        y = 5
+        self.titlelabel.place(x=0, y=y, width=wx, height=30)
+        y += 30
+        self.namelabel.place(x=0, y=y, width=wx, height=30)
+        y += 40
+        w, h = self.hwstatus.get_size()
+        x = xpad 
+        self.hwstatus.place(x=x, y=y, width=w, height=h)
+        y += h + 10
+        w, h = self.gameclock.get_size()
+        self.gameclock.place(x=x, y=y, width=w, height=h)
+        y += h + 10
+        joystk0 = self.joystick_widgets[0]
+        joystk1 = self.joystick_widgets[1]
+        w, h = joystk0.get_size()
+        w1, h1 = joystk1.get_size() 
+        joystk0.place(x=x, y=y, width=w, height=h)
+        x1 = x + w + xpad 
+        joystk1.place(x=x1, y=y, width=w1, height=h1)
+        if h < h1: h = h1
+        y += h + 10
+        w, h = self.commstatus.get_size()
+        self.commstatus.place(x=x, y=y, width=w, height=h)  
+        x2 = x + w + 5
+        w2, h2 = self.botstatus.get_size()
+        self.botstatus.place(x=x2, y=y, width=w2, height=h2)
+        x3 = x2 + w2 + xpad
+        w, h = self.arduinostatus.get_size()
+        self.arduinostatus.place(x=x3, y=y, width=w, height=h)
 
-        self.quitbackgroundtasks = False
-        self.bg_count = 0
-        self.last_btns = []
-        self.last_xyz = []
-        self.last_ruv = []
-
+    def set_mqtt_fields_off(self):
         # Do this once here to avoid stupid updates in the background loop
         if self.mqtt == None:
             self.commstatus.set_field("Status", "Disabled")
@@ -395,22 +459,27 @@ class DriveStation(tk.Frame):
             self.monitor_mqtt()
             self.monitor_botstatus()
             self.monitor_arduino()
-            for i in range(len(self.joysticks)):
-                btns = self.joysticks[i].get_buttons()
-                xyz = self.joysticks[i].get_axis()
-                ruv = self.joysticks[i].get_ruv()
-                hats = self.joysticks[i].get_hat()
-                haveconnection = self.joysticks[i].is_connected()
+            joysticks_okay = True
+            for ij in range(self.config.number_of_joysticks):
+                btns = self.joysticks[ij].get_buttons()
+                xyz = self.joysticks[ij].get_axis()
+                ruv = self.joysticks[ij].get_ruv()
+                hats = self.joysticks[ij].get_hat()
+                haveconnection = self.joysticks[ij].is_connected()
                 if haveconnection: 
-                    self.joystick_ui[i].set_mode('active')
-                    self.hwstatus.set_status("Joystick", dscolors.status_okay)
+                    self.joystick_widgets[ij].set_mode('active')
                 else: 
-                    self.joystick_ui[i].set_mode('invalid')
-                    self.hwstatus.set_status("Joystick", dscolors.status_error)
-                self.joystick_ui[i].set_axis(*xyz, axis=0)
-                self.joystick_ui[i].set_ruv(*ruv)
-                self.joystick_ui[i].set_buttons(*btns)
-                self.joystick_ui[i].set_hats(*hats)
+                    self.joystick_widgets[ij].set_mode('invalid')
+                    joysticks_okay = False
+                self.joystick_widgets[ij].set_axis(*xyz, axis=0)
+                self.joystick_widgets[ij].set_ruv(*ruv)
+                self.joystick_widgets[ij].set_buttons(*btns)
+                self.joystick_widgets[ij].set_hats(*hats)
+
+            if joysticks_okay:
+                self.hwstatus.set_status("Joystick", dscolors.status_okay)
+            else:
+                self.hwstatus.set_status("Joystick", dscolors.status_error)
             if self.mqtt:
                 self.send_loop_cmd()
                 # send out joystick values to robot here...
@@ -458,17 +527,14 @@ if __name__ == "__main__":
         enable_mqtt = False
 
     config = DSConfiguration()
+    if config.number_of_joysticks == 1: winsize = winsize_1_joystick 
+    if config.number_of_joysticks == 2: winsize = winsize_2_joystick
+    wx, wy = winsize
     root = tk.Tk()
     root.title("Driver Station for Water Bot")
-    root.geometry("%dx%d" % (config.wx, config.wy))
+    root.geometry("%dx%d" % winsize)
     ds = DriveStation(root, config, enable_mqtt=enable_mqtt)
-    #Hack to left align the Drive Station
-    #TODO: Figure out how to do this better
-    if config.joysticks > 1:
-      ds.place(x=-(config.wx//4), y=0, relwidth=1, relheight=1)
-    else:
-      ds.place(x=0, y=0, relwidth=1, relheight=1)
-
+    ds.place(x=0, y=0, width=wx, height=wy) 
     ds.start_background()
     root.mainloop()
     ds.stop_all()

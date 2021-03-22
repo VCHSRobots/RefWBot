@@ -1,41 +1,43 @@
-# joystickwidget.py -- joystick widget to show joystick inputs
+# joystickwidget_xbox.py -- joystick widget to show joystick inputs for XBox gamepad
 # EPIC Robotz, dlb, Mar 2021
+# Rewriten from joystickwidget_logitech.py by Holiday P, March 2021
 
 import tkinter as tk
 import tkinter.font as tkFont
 import math
+import dscolors
 
 # Constants to control the layout of the diagram:
-desiredsize = (250, 230) # desired size of widget for placing
+desiredsize = (250, 200) # desired size of widget for placing
 horz_px = 210 # horzontal size of the the widget in pixels
 vert_px = 210 # vertial size of the widget in pixels
 blockout = (0, 0, 200, 180) # block out rect for invalid flag
 xorg = 100 # x orgin of the complete diagram. which is center of main cross bars.
 yorg = 100 # y orgin of the complete diagram, which is center of main cross bars.
 a1xorg = 50 # x origin of the right cross bars
-a1yorg = 100 # y origin of the right cross bars
+a1yorg = 70 # y origin of the right cross bars
 a2xorg = 150 # x origin of the left cross bars
-a2yorg = 130 # y origin of the right cross bars
-zbar1 = (-80, 30, 50, 10) # loc, len, width of the first z slider diagram
-zbar2 = (80, 50, 50, 10) # loc, len, width of the second z slider diagram
-textloc = (0, 90) # center loc of the status text
-hatloc = (-40, 60) # center loc of the hats indicator
+a2yorg = 100 # y origin of the right cross bars
+zbar1 = (-80, 5, 50, 10) # loc, len, width of the first z slider diagram
+zbar2 = (80, 20, 50, 10) # loc, len, width of the second z slider diagram
+textloc = (0, 73) # center loc of the status text
+hatloc = (-30, 30) # center loc of the hats indicator
 barlen2 = 40   # one side bar lenght in px
 barwidth2 = 8  # one half of bar width in px
 linewidth = 2   # linewidth on edges of bars and buttons
 btnsz = 8  # size of the buttons in px
 hatsz = 8
 # locations of buttons relative to orgin
-btnrectslocs=((75, -25), (83, -33), (67, -33), (75, -41), (-60, -75), (60, -75), 
-              (-35, -50), (35, -50), (0, -50), (-55, -2), (45, 28))
+btnrectslocs=((75, -55), (83, -63), (67, -63), (75, -71), (-60, -95), (60, -95), 
+              (-35, -80), (35, -80), (0, -80), (-39, -50), (62, -20))
 
 class JoystickWidget(tk.Frame):
     def __init__(self, parent):
         #Create main tk frame
-        tk.Frame.__init__(self, parent, borderwidth=2, relief="groove", bg="white")
+        tk.Frame.__init__(self, parent, borderwidth=2, relief="groove", bg=dscolors.widget_bg)
         self._canvas = tk.Canvas(self, width=horz_px, height=vert_px, borderwidth=0,
-            highlightthickness=0, background='white')
-        self._canvas.pack(padx=10, pady=10)
+            highlightthickness=0, background=dscolors.widget_bg)
+        self._canvas.pack(padx=4, pady=4)
         self._background = self._canvas.create_rectangle(*blockout, fill="", outline="")
         rawpoints = [(-barwidth2, barwidth2),
             (-barwidth2, barwidth2), (-barwidth2, barlen2), (barwidth2, barlen2),
@@ -45,28 +47,28 @@ class JoystickWidget(tk.Frame):
             (-barwidth2, barwidth2)]
         #Draw the pirst cross display
         relpoints = [(x+a1xorg, y+a1yorg) for x,y in rawpoints]       
-        self._canvas.create_polygon(relpoints, outline="blue", fill="lightgrey", width=linewidth)
+        self._canvas.create_polygon(relpoints, outline="blue", fill=dscolors.indicator_bg, width=linewidth)
         self._xdir1 = self._canvas.create_rectangle(a1xorg-linewidth, a1yorg+(barwidth2-linewidth),
-            a1xorg+linewidth, yorg-(barwidth2-linewidth), fill="red", outline="red")
+            a1xorg+linewidth, yorg-(barwidth2-linewidth), fill=dscolors.indicator_fg, outline=dscolors.indicator_fg)
         self._ydir1 = self._canvas.create_rectangle(a1xorg-(barwidth2-linewidth), a1yorg-linewidth,
-            a1xorg+(barwidth2-linewidth), a1yorg+linewidth, fill="red", outline="red")
+            a1xorg+(barwidth2-linewidth), a1yorg+linewidth, fill=dscolors.indicator_fg, outline=dscolors.indicator_fg)
         self._dot1 = self._canvas.create_oval(a1xorg-(barwidth2-linewidth), a1yorg-(barwidth2-linewidth),
-            a1xorg+(barwidth2-linewidth), a1yorg+(barwidth2-linewidth), fill="red", outline="red")
+            a1xorg+(barwidth2-linewidth), a1yorg+(barwidth2-linewidth), fill=dscolors.indicator_fg, outline=dscolors.indicator_fg)
         #Draw the second cross display
         relpoints = [(x+a2xorg, y+a2yorg) for x,y in rawpoints]       
-        self._canvas.create_polygon(relpoints, outline="blue", fill="lightgrey", width=linewidth)
+        self._canvas.create_polygon(relpoints, outline="blue", fill=dscolors.indicator_bg, width=linewidth)
         self._xdir2 = self._canvas.create_rectangle(a2xorg-linewidth, a2yorg+(barwidth2-linewidth),
-            a2xorg+linewidth, a2yorg-(barwidth2-linewidth), fill="red", outline="red")
+            a2xorg+linewidth, a2yorg-(barwidth2-linewidth), fill=dscolors.indicator_fg, outline=dscolors.indicator_fg)
         self._ydir2 = self._canvas.create_rectangle(a2xorg-(barwidth2-linewidth), a2yorg-linewidth,
-            a2xorg+(barwidth2-linewidth), a2yorg+linewidth, fill="red", outline="red")
+            a2xorg+(barwidth2-linewidth), a2yorg+linewidth, fill=dscolors.indicator_fg, outline=dscolors.indicator_fg)
         self._dot2 = self._canvas.create_oval(a2xorg-(barwidth2-linewidth), a2yorg-(barwidth2-linewidth),
-            a2xorg+(barwidth2-linewidth), a2yorg+(barwidth2-linewidth), fill="red", outline="red")
+            a2xorg+(barwidth2-linewidth), a2yorg+(barwidth2-linewidth), fill=dscolors.indicator_fg, outline=dscolors.indicator_fg)
         #Draw the buttons
         self._btnrecs = []
         for x, y in btnrectslocs: 
             x0, y0, x1, y1 = x+xorg, y+yorg, x+xorg+btnsz, y+yorg+btnsz
             b = self._canvas.create_rectangle(x0, y0, x1, y1,
-                outline="black", fill="lightgray", width=1)
+                outline="black", fill=dscolors.indicator_bg, width=1)
             self._btnrecs.append(b)
         #Draw the hat display
         self._hatrecs = []
@@ -79,26 +81,26 @@ class JoystickWidget(tk.Frame):
             for x, y in hatlocs[i]:
                 x0, y0, x1, y1 = x+xorg, y+yorg, x+xorg+hatsz, y+yorg+hatsz
                 h = self._canvas.create_rectangle(x0, y0, x1, y1,
-                    outline="black", fill="lightgray", width=1)
+                    outline="black", fill=dscolors.indicator_bg, width=1)
                 self._hatrecs[-1].append(h)
         self._hatrecs[0][0]
         #Set and draw the first zbar
         x, y, h, w = zbar1
         x0, y0, x1, y1 = xorg + x, yorg + y, xorg + x + w, yorg + y + h
         self._zbar1 = self._canvas.create_rectangle(x0, y0, x1, y1, outline="blue",
-                            fill="lightgray", width=linewidth)
+                            fill=dscolors.indicator_bg, width=linewidth)
         self._zdir1 = self._canvas.create_rectangle(x0+linewidth, y0+linewidth, 
-                    x1-linewidth, y1-linewidth, fill="red", outline="red")
+                    x1-linewidth, y1-linewidth, fill=dscolors.indicator_fg, outline=dscolors.indicator_fg)
         #Set and draw the second zbar
         x, y, h, w = zbar2
         x0, y0, x1, y1 = xorg + x, yorg + y, xorg + x + w, yorg + y + h
         self._zbar2 = self._canvas.create_rectangle(x0, y0, x1, y1, outline="blue",
-                            fill="lightgray", width=linewidth)
+                            fill=dscolors.indicator_bg, width=linewidth)
         self._zdir2 = self._canvas.create_rectangle(x0+linewidth, y0+linewidth, 
-                    x1-linewidth, y1-linewidth, fill="red", outline="red")
+                    x1-linewidth, y1-linewidth, fill=dscolors.indicator_fg, outline=dscolors.indicator_fg)
         self._statusfont = self._bigfont = tkFont.Font(family="Lucida Grande", size=12)
         x, y = textloc
-        self._status = self._canvas.create_text(x + xorg, y + yorg, text="Joystick",
+        self._status = self._canvas.create_text(x + xorg, y + yorg, text="GamePad",
                         state=tk.DISABLED, fill="black", anchor=tk.CENTER, font=self._statusfont)
         self._joyaxis = (0.0, 0.0, 0.0)
         self._joybtns = tuple([False for x in range(12)])
@@ -125,10 +127,12 @@ class JoystickWidget(tk.Frame):
         if mode == self._lastmode: return
         self._lastmode = mode
         if mode == 'active':
-            self._canvas.itemconfig(self._background, fill="", outline="")
+            self._canvas.itemconfig(self._background, fill=dscolors.widget_bg,
+                outline=dscolors.widget_bg)
             self.set_statustext(text="Joystick", color="black")
         if mode == 'invalid':
-            self._canvas.itemconfig(self._background, fill="yellow", outline="yellow")
+            self._canvas.itemconfig(self._background, fill=dscolors.indicator_invalid_bg,
+                outline=dscolors.indicator_invalid_bg)
             self.set_statustext(text="Joystick Not Found", color="red")
 
     def set_axis(self, *args, axis=0):
@@ -239,9 +243,9 @@ class JoystickWidget(tk.Frame):
         icnt = 0
         for r in self._btnrecs:
             if self._joybtns[icnt]:
-                self._canvas.itemconfig(r, fill="red")
+                self._canvas.itemconfig(r, fill=dscolors.indicator_fg)
             else:
-                self._canvas.itemconfig(r, fill="lightgray")
+                self._canvas.itemconfig(r, fill=dscolors.indicator_bg)
             icnt += 1
     
     def _showhats(self):
@@ -251,6 +255,6 @@ class JoystickWidget(tk.Frame):
         for i in range(len(self._hatrecs)):
             for j in range(len(self._hatrecs[i])):
                 if i == self._joyhats[1]+1 and j == self._joyhats[0]+1:
-                    self._canvas.itemconfig(self._hatrecs[i][j], fill="red")
+                    self._canvas.itemconfig(self._hatrecs[i][j], fill=dscolors.indicator_fg)
                 else:
-                    self._canvas.itemconfig(self._hatrecs[i][j], fill="lightgray")
+                    self._canvas.itemconfig(self._hatrecs[i][j], fill=dscolors.indicator_bg)

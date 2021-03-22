@@ -51,8 +51,9 @@ class WaterBot():
       self.xyz = (0.0, 0.0, 0.0)
       self.ruv = (0.0, 0.0, 0.0)
       self.buttons = (False for _ in range(12))
-      # ------------------
-      # Create actuators and sensors here...s
+      # ############################################################################     
+      # Create actuators and sensors here
+
       self.left_motor = hydromotor.HydroMotor(self.pca, 4)
       self.right_motor = hydromotor.HydroMotor(self.pca, 5)
       self.hydrodrive = hydromotor.HydroDrive(self.left_motor, self.right_motor)
