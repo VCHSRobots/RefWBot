@@ -6,10 +6,10 @@ import tkinter.font as tkFont
 import dscolors
 
 # Constants to control the layout of the diagram:
-desiredsize = (125, 150) # desired size of widget for placing
-horz_px, vert_px = 210, 150 # size of canvas
+desiredsize = (120, 150) # desired size of widget for placing
+horz_px, vert_px = 120, 150 # size of canvas
 lineheight = 18 # height between fields
-namewidth = 110  # size of the field name
+namewidth = 105  # size of the field name
 xmargin = 2 # x margin for start of field name
 fields = ("Bat M", "Bat L", "I2CErrs", "Restarts")
 

@@ -205,7 +205,8 @@ class Joystick():
         ''' Returns a list of three floats (-1 to +1) describing the joystick's XYZ axis.
         If there is an error or the joystick is not connected, zeros are returned. '''
         vals = [0, 0, 0]
-        self._is_inited = self.joy.get_init()
+        self._is_inited = self.joy.get_init() 
+        
         if not self._is_inited: self.reset()
         if not self._is_inited: 
             return [0, 0, 0]

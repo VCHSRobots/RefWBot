@@ -1,4 +1,5 @@
-# joystickwidget.py -- joystick widget to show joystick inputs
+# joystickwidget_logitech.py -- joystick widget to show joystick inputs
+# for Logitech 3D Pro joystick
 # EPIC Robotz, dlb, Mar 2021
 
 import tkinter as tk
@@ -10,12 +11,12 @@ import dscolors
 desiredsize = (250, 200) # desired size of widget for placing
 horz_px = 210 # horzontal size of the the widget in pixels
 vert_px = 210 # vertial size of the widget in pixels
-blockout = (0, 0, 200, 200) # block out rect for invalid flag
+blockout = (0, 0, 200, 180) # block out rect for invalid flag
 xorg = 100 # x orgin of the complete diagram. which is center of main cross bars.
 yorg = 88 # y orgin of the complete diagram, which is center of main cross bars.
 xytwist = (-80, 30, 50) # loc of arc center and size for twist diagram
 zbar = (50, 30, 50, 10) # loc, len, width of z slider diagram
-textloc = (0, 90) # center loc of the status text
+textloc = (0, 85) # center loc of the status text
 barlen2 = 75   # one side bar lenght in px
 barwidth2 = 10  # one half of bar width in px
 linewidth = 2   # linewidth on edges of bars and buttons

@@ -1,4 +1,5 @@
-# joystickwidget.py -- joystick widget to show joystick inputs
+# joystickwidget_logitech.py -- joystick widget to show joystick inputs 
+# for Logitech Extreme 3D Pro Joystick
 # EPIC Robotz, dlb, Mar 2021
 
 import tkinter as tk

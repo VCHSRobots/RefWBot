@@ -11,10 +11,10 @@
 [Robot]
 Title = EPIC Robotz
 TeamName = Ref Bot
-WindowWidth = 300
-WindowHeight = 860
 LogicBatteryWarning = 7.375
 LogicBatteryError = 7.0
 MotorBatteryWarning = 10.75
 MotorBatteryError = 9.5
-NumJoysticks = 1
+NumberOfJoysticks = 1
+JoystickPort1 = XBox
+JoystickPort2 = Logitech
