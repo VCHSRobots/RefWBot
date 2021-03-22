@@ -1,3 +1,5 @@
 __pycache__/
 dsconfig.txt
 rpi/runflex.py
+rpi/runhydro.py
+rpi/rungold.py
