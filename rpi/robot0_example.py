@@ -11,6 +11,10 @@
 # in the class.
 #
 
+import hydromotor
+import toggle
+import motor775
+
 class WaterBot():
     def __init__(self, base_sys):
         ''' This inits your custom class -- do nothing here
@@ -22,20 +26,32 @@ class WaterBot():
         that you should create the objects that control the 
         robot.  The base system is already mostly initialized
         so that you can access the features of the base code.'''
-        pass
+        self.left_motor = hydromotor.HydroMotor(self.base.pca, 4)
+        self.right_motor = hydromotor.HydroMotor(self.base.pca, 5)
+        self.hydrodrive = hydromotor.HydroDrive(self.left_motor, self.right_motor)
+        self.hydrodrive.shutdown()
 
-    def stop(self, loopcount):
+    def stop(self, loop_count):
         ''' Called repeatedly when the robot is in stop mode.'''
-        pass
+        if loop_count == 0:
+          print("**** Switching to STOP")
+          self.base.pca.killall()
 
-    def auto(self, loopcount):
+    def auto(self, loop_count):
         ''' Called repeatedly when the robot is in auto mode.
         On the first call after a mode change, loopcount is zero,
         and then it increases by one for succeding calls.'''
-        pass
+        if loop_count == 0:
+          print("**** Switching to AUTO")
+          self.base.pca.killall()
     
-    def teleop(self, loopcount):
+    def teleop(self, loop_count):
         ''' Called repeatedly when the robot is in teleop mode.
         On the first call after a mode change, loopcount is zero,
         and then it increases by one for succeding calls.'''
-        pass
+        if loop_count == 0:
+            print("**** Switching to TELEOP")
+            self.hydrodrive.start()
+        x, y, z, _, _, _ = self.base.axes0
+        self.base.pca.set_servo(15, z)
+        self.hydrodrive.move(x, y)

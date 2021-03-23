@@ -3,6 +3,7 @@
 #
 # Version 1.0: Fully working with one or two joystick/gamepad inputs.
 # Version 1.1: Revamped joystick driver code
+# Version 1.2: Added outside user class
 #
 # NOTE: This version supports ONE or TWO joysticks/gamepad inputs.
 # The widget layout changes accordingly.  With one joystick, the layout

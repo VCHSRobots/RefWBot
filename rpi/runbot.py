@@ -1,11 +1,15 @@
 # runbot.py -- Main python program to run for water bot competition
 # EPIC Robotz, dlb, Feb 2021
-
+#
+# Verson 1.3 -- Added outside user class
+#
 # Notes:
 #  1. Possible modes are: "STOP", "TELEOP", "AUTO".  If any other mode is
 #  received from the driver station, STOP is asserted.
 #
 
+import os
+import traceback
 import mqttrobot
 import pca9685 as pca
 import arduino_wb
@@ -20,14 +24,33 @@ dstimeout = 3.0  # number of seconds before kill due to no msg received from dri
 #  Attempt to load in the user code here.  The first module found with robot_*.py will
 # be used.
 
-
-
+def get_user_module():
+  ''' Attempts to find the robot_xxx.py file that the user wants to 
+  used for dynamic loading.  If found, the module is loaded and returned,
+  but the interal WaterBot class is NOT initiated.'''
+  flst = os.listdir()
+  module_file = ""
+  for f in flst:
+      if f.endswith(".py") and f.startswith("robot_"):
+          module_file = f
+  if module_file == "":
+      print("********************* User code not found!")
+      return None
+  module_name = module_file[:-3]
+  try:
+    user_module = __import__(module_name)
+  except Exception as e:
+    print("Error loading %s: " % module_name)
+    traceback.print_exc()
+    return None
+  return user_module
 
 class WaterBotBase():
   ''' WaterBot class is the main class for the program that controls the Water Bot. '''
 
-  def __init__(self):
+  def __init__(self, user_module):
       ''' Initialization of the WaterBot. '''
+      self.user_module = user_module
       self.mqtt = mqttrobot.MqttRobot()
       self.ping_count = 0
       self.botmode = "STOP" # given from the driver station
@@ -64,15 +87,26 @@ class WaterBotBase():
       self.axes1 = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
       self.pov1 = (0,0)
       self.buttons1 = (False for _ in range(12))
-      self.user_code_error = False
-      # ############################################################################     
-      # Create actuators and sensors here
-
-      self.left_motor = hydromotor.HydroMotor(self.pca, 4)
-      self.right_motor = hydromotor.HydroMotor(self.pca, 5)
-      self.hydrodrive = hydromotor.HydroDrive(self.left_motor, self.right_motor)
-      self.hydrodrive.shutdown()
-
+      self.user_class = None
+      self.user = None
+      if self.user_module is not None:
+        try:
+          self.user_class = getattr(self.user_module, "WaterBot")
+          self.user = self.user_class(self)
+        except Exception:
+          print("*** Unable to create user WaterBot object.")
+          self.user_code_error = True
+          self.user = None
+      if self.user:
+        try:
+          self.user.initialize()
+        except Exception as e:
+          self.user_code_error = True
+          print("**** Unable to call initialize on user Waterbot.")
+          print("Exception = ", e)
+          traceback.print_exc()
+      self.user_code_error = self.user is None
+    
   # -------------------------------------------------------------------
   # Callback Functions
 
@@ -205,6 +239,10 @@ class WaterBotBase():
       x0, y0 = self.pov0
       x1, y1 = self.pov1
       print("POV0 = (%d, %d)   POV1 = (%d %d)" % (x0, y0, x1, y1))
+      if self.user:
+        print("User WaterBot class loaded from %s." % self.user_module.__name__)
+      else:
+        print("***  User Module Not Loaded!!")
       print("msgerr = %d, msgtmeouts = %d" % (self.msg_err_count, self.msg_timeout_count))
 
   def report_status_to_ds(self):
@@ -258,16 +296,15 @@ class WaterBotBase():
   def stop(self, loop_count):
     ''' Called in stop mode.  Here, all motors and actuators should be 
     shut off. '''
-    ## ******* Put shut down code below. 
-    if self.run_loop_count == 0:
-      print("**** Switching to STOP")
-      # Kill all motors and actuators here...
-      if self.hw_okay:
-        try:
-          self.hydrodrive.shutdown()
-          self.pca.killall()
-        except:
-          pass
+    if self.user:
+      try:
+        self.user.stop(loop_count)
+      except Exception:
+        if not self.user_code_error: 
+          print("**** User Stop code Failed.")
+          traceback.print_exc()
+        self.user_code_error = True
+        self.pca.killall()
 
   def run_auto(self, loop_count, time_to_go):
     ''' Called repeatedly during auto.  On inital call after a mode switch,
@@ -275,12 +312,14 @@ class WaterBotBase():
     time_to_go variable has the number of seconds that the driver station
     reports for the time till the end of the auto period.  Note that
     time_to_go may not decrease in keeping with actual time. '''
-    ## ******* Put auto code below
-    if loop_count == 0:
-      # Initialize stuff here...
-      print("**** Switching to Auto")
-      self.pca.killall()
-    pass
+    if self.user:
+      try:
+        self.user.auto(loop_count)
+      except Exception:
+        if not self.user_code_error: 
+          print("**** User Auto code Failed.")
+          traceback.print_exc()
+        self.user_code_error = True 
 
   def run_teleop(self, loop_count, time_to_go):
     ''' Called repeatedly during teleop.  On inital call after a mode switch,
@@ -288,16 +327,17 @@ class WaterBotBase():
     time_to_go variable has the number of seconds that the driver station
     reports for the time till the end of the match.  Note that time_to_go may not
     decrease in keeping with actual time. '''
-    # ********* Put teleop code below
-    if loop_count == 0:
-      #initalize stuff here...
-      print("**** Switching to TeleOp")
-      self.hydrodrive.start()
-    x, y, z, _, _, _ = self.axes0
-    self.pca.set_servo(15, z)
-    self.hydrodrive.move(x, y)
+    if self.user:
+      try:
+        self.user.teleop(loop_count)
+      except Exception:
+        if not self.user_code_error: 
+          print("**** User Teleop Code Failed.")
+          traceback.print_exc()
+        self.user_code_error = True
 
 if __name__ == "__main__":
-    wb = WaterBotBase()
+    user_module = get_user_module()
+    wb = WaterBotBase(user_module)
     wb.run()
 

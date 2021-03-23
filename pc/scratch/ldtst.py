@@ -24,6 +24,7 @@ module_name = module_file[:-3]
 
 print("Using File: %s" % module_name)
 user_module = __import__(module_name)
+print("User Module = %s" % user_module)
 user_class = getattr(user_module, "WaterBot")
 base = Base()
 user = user_class(base)
