@@ -74,6 +74,12 @@ def data_to_dict(strdata):
         dout["PWM10"] = data[reg.PWM10] / 255.0 
     if len(data) > reg.PWM11:
         dout["PWM11"] = data[reg.PWM11] / 255.0 
+    if len(data) > reg.XXX0:
+        dout["XXX0"] = data[reg.XXX0]
+    if len(data) > reg.XXX1:
+        dout["XXX1"] = data[reg.XXX1]
+    if len(data) > reg.XXX2:
+        dout["XXX2"] = data[reg.XXX2]
     return dout
     
 

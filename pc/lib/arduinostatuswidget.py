@@ -11,7 +11,7 @@ horz_px, vert_px = 210, 150 # size of canvas
 lineheight = 18 # height between fields
 namewidth = 200  # size of the field name
 xmargin = 2 # x margin for start of field name
-fields = ("Sigv", "Bat", "Time", "Analog", "Digital", "PWM")
+fields = ("Sigv", "Time", "Analog", "Digital", "PWM", "XXX")
 
 class ArduinoStatusWidget(tk.Frame):
     def __init__(self, parent):
@@ -25,7 +25,7 @@ class ArduinoStatusWidget(tk.Frame):
         self._title = self._canvas.create_text(2, 7, anchor=tk.W, text="Arduino",
                 font=self._font1, fill="black")
         self._fields = []
-        x, y = xmargin, 2*lineheight
+        x, y = xmargin, int(1.7*lineheight)
         for name in fields:
             fname = self._canvas.create_text(x, y, anchor=tk.W, text=name+":", font=self._font2,
                 fill=dscolors.label_black)

@@ -2,30 +2,23 @@
 # Epic Robotz, dlb, Mar 2021
 #
 # Version 1.0: Fully working with one or two joystick/gamepad inputs.
+# Version 1.1: Revamped joystick driver code
 #
 # NOTE: This version supports ONE or TWO joysticks/gamepad inputs.
 # The widget layout changes accordingly.  With one joystick, the layout
 # is fully vertical, but with two, the layout has left and right
 # widgets.
 
-#Check what platform we are working on
-import platform
-#TODO: Put the respective MID and PIDs for each joystick here for each platform
-if platform.system() == "Windows":
-  import joystick
-elif platform.system() == "Linux":
-  import joystick_linux as joystick
-
-LOGITECH_STYLE = "Logitech 3D"
-XBOX_STYLE = "XBox Gamepad"
-winsize_1_joystick = (270, 860)
-winsize_2_joystick = (530, 700)
-winsize = winsize_1_joystick  # Default
-
+# -- System imports...
 import sys
 import configparser
 import tkinter as tk
 import tkinter.font as tkFont
+import threading
+import time
+
+# -- Our imports...
+import joystick
 import mqttrobot
 import gameclockwidget
 import joystickwidget_logitech as joystick_logitech
@@ -36,9 +29,13 @@ import botstatuswidget
 import arduinostatuswidget
 import arduino_decode as adec
 import dscolors
-import threading
-import time
 from utils import *
+
+LOGITECH = "Logitech 3D Pro"
+XBOX = "XBox Gamepad"
+winsize_1_joystick = (270, 860)
+winsize_2_joystick = (530, 610)
+winsize = winsize_1_joystick  # Default
 
 class DSConfiguration():
   def __init__(self):
@@ -76,9 +73,9 @@ class DriveStation(tk.Frame):
           print("Please fix configuration file.")
           sys.exit()
         if self.config.joystick_port_1 == "Logitech":
-          self.joysticks.append(joystick.Joystick(style=LOGITECH_STYLE))
+          self.joysticks.append(joystick.Joystick(LOGITECH, 0))
         elif self.config.joystick_port_1 == "XBox":
-          self.joysticks.append(joystick.Joystick(style=XBOX_STYLE))
+          self.joysticks.append(joystick.Joystick(XBOX, 0))
         else:
           print("Invalid joystick on port 1 (%s). Valid joysticks are: Logitech or XBox." % 
             self.config.joystick_port_1)
@@ -86,9 +83,13 @@ class DriveStation(tk.Frame):
           sys.exit()
         if self.config.number_of_joysticks == 2:
           if self.config.joystick_port_2 == "Logitech":
-            self.joysticks.append(joystick.Joystick(style=LOGITECH_STYLE))
+            instance = 0
+            if self.config.joystick_port_1 == "Logitech": instance = 1
+            self.joysticks.append(joystick.Joystick(LOGITECH, instance))
           elif self.config.joystick_port_2 == "XBox":
-            self.joysticks.append(joystick.Joystick(style=XBOX_STYLE))
+            instance = 0
+            if self.config.joystick_port_1 == "XBox": instance = 1
+            self.joysticks.append(joystick.Joystick(XBOX, instance))
           else:
             print("Invalid joystick on port 2 (%s). Valid joysticks are: Logitech or XBox." % 
               self.config.joystick_port_2)
@@ -101,12 +102,13 @@ class DriveStation(tk.Frame):
         self.last_arduino_status = time.monotonic() - 100.0
         self.last_arduino_ui_update = time.monotonic() - 100.0
         self.arduino_data = None
+        self.arduino_reset_flag = False
         self.run_loop_cnt = 0
         self.quitbackgroundtasks = False
         self.bg_count = 0
-        self.last_btns = []
-        self.last_xyz = []
-        self.last_ruv = []
+        self.last_btns = [[], []]
+        self.last_axes = [[], []]
+        self.last_pov = [(0, 0), (0,0)]
         
         # Setup the GUI...
         self.titlefont = tkFont.Font(family="Copperplate Gothic Bold", size=24)
@@ -116,16 +118,16 @@ class DriveStation(tk.Frame):
         self.hwstatus = hardwarestatuswidget.HardwareStatusWidget(self)
         self.gameclock = gameclockwidget.GameClockWidget(self)
         self.commstatus = commstatuswidget.CommStatusWidget(self)
-        self.botstatus = botstatuswidget.BotStatusWidget(self)
+        self.botstatus = botstatuswidget.BotStatusWidget(self, reset_callback=self.do_arduino_reset)
         self.arduinostatus = arduinostatuswidget.ArduinoStatusWidget(self)
         self.joystick_widgets = []
         for joy in self.joysticks:
-          if joy._style==LOGITECH_STYLE:
+          if joy.get_name() == LOGITECH:
             self.joystick_widgets.append(joystick_logitech.JoystickWidget(self))
-          elif joy._style==XBOX_STYLE:
+          elif joy.get_name() == XBOX:
             self.joystick_widgets.append(joystick_xbox.JoystickWidget(self))
           else:
-            print("Unknown joystick of MID/PID of {} {} detected. Defaulting to Logitech widget".format(joy._midpid[0], joy._midpid[1]))
+            print("Unknown joystick detected. Defaulting to Logitech widget.")
             self.joystick_widgets.append(joystick_logitech.JoystickWidget(self))
         if len(self.joystick_widgets) < 1:
           raise("Internal Consistancy Check Error.  Programming Problem.")
@@ -141,7 +143,7 @@ class DriveStation(tk.Frame):
 
     def layout_for_one_joystick(self):
         ''' Do the layout for one joystick '''
-        wx, wy = winsize
+        wx, _ = winsize
         xpad = 10 # This is the padding on the left
         y = 5
         self.titlelabel.place(x=0, y=y, width=wx, height=30)
@@ -178,12 +180,13 @@ class DriveStation(tk.Frame):
         y += 30
         self.namelabel.place(x=0, y=y, width=wx, height=30)
         y += 40
-        w, h = self.hwstatus.get_size()
         x = xpad 
-        self.hwstatus.place(x=x, y=y, width=w, height=h)
-        y += h + 10
-        w, h = self.gameclock.get_size()
-        self.gameclock.place(x=x, y=y, width=w, height=h)
+        w, h1 = self.gameclock.get_size()
+        self.gameclock.place(x=x, y=y, width=w, height=h1)
+        x1 = x + w + xpad
+        w, h2 = self.hwstatus.get_size()
+        self.hwstatus.place(x=x1, y=y, width=w, height=h2)
+        h = max(h1, h2)
         y += h + 10
         joystk0 = self.joystick_widgets[0]
         joystk1 = self.joystick_widgets[1]
@@ -216,7 +219,8 @@ class DriveStation(tk.Frame):
             self.botstatus.set_field("Bat1", "---")
             self.botstatus.set_field("Bat2", "---")
             self.botstatus.set_field("I2CErrs", "---")
-            self.botstatus.set_field("Restarts", "---")
+            self.botstatus.set_field("Recovers", "---")
+            self.botstatus.set_field("CodeVer", "---")
 
     def setup_mqtt(self, enable):
       ''' Do the setup for MQTT. '''
@@ -280,6 +284,9 @@ class DriveStation(tk.Frame):
     def on_arduino_data(self, topic, data):
       self.last_arduino_status = time.monotonic() 
       self.arduino_data = data
+    
+    def do_arduino_reset(self):
+      self.arduino_reset_flag = True
       
     def monitor_mqtt(self):
         ''' Monitors activity of mqtt, and reports it to the ui. '''
@@ -324,7 +331,8 @@ class DriveStation(tk.Frame):
         self.botstatus.set_field("Bat1", "---")
         self.botstatus.set_field("Bat2", "---")
         self.botstatus.set_field("I2CErrs", "---")
-        self.botstatus.set_field("Restarts", "---")
+        self.botstatus.set_field("Recovers", "---")
+        self.botstatus.set_field("CodeVer",  "---")
         return
       timenow = time.monotonic()
       if timenow - t0 > 10.0 or timenow - t1 > 9.0:
@@ -335,21 +343,23 @@ class DriveStation(tk.Frame):
         self.botstatus.set_field("Bat1", "---")
         self.botstatus.set_field("Bat2", "---")
         self.botstatus.set_field("I2CErrs", "---")
-        self.botstatus.set_field("Restarts", "---")
+        self.botstatus.set_field("Recovers", "---")
+        self.botstatus.set_field("CodeVer",  "---")
         return
       elif timenow - t0 > 4.0 or timenow - t1 > 3.0:
         self.hwstatus.set_status("Code", dscolors.status_warn)
       else:
         self.hwstatus.set_status("Code", dscolors.status_okay)
       words = d1.split()
-      if len(words) != 7:
+      if len(words) < 7:
         self.hwstatus.set_status("I2C Bus", dscolors.status_error)
         self.hwstatus.set_status("Bat M", dscolors.status_error)
         self.hwstatus.set_status("Bat L", dscolors.status_error)
         self.botstatus.set_field("Bat M", "---")
         self.botstatus.set_field("Bat L", "---")
         self.botstatus.set_field("I2CErrs", "---")
-        self.botstatus.set_field("Restarts", "---")
+        self.botstatus.set_field("Recovers", "---")
+        self.botstatus.set_field("CodeVer",  "---")
         return
       bat_m = bat_l = 0.0
       try:
@@ -362,9 +372,9 @@ class DriveStation(tk.Frame):
       except ValueError:
         i2cerrs = -1
       try: 
-        restarts = int(words[6])
+        recovers = int(words[6])
       except ValueError:
-        restarts = -1
+        recovers = -1
       if bat_m > self.config.bat_motor_warning: 
         self.hwstatus.set_status("Bat M", dscolors.status_okay)
       elif bat_m > self.config.bat_motor_error:
@@ -388,10 +398,14 @@ class DriveStation(tk.Frame):
         self.botstatus.set_field("I2CErrs", "---")
       else:
         self.botstatus.set_field("I2CErrs", "%d" % i2cerrs)
-      if restarts == -1:
-        self.botstatus.set_field("Restarts", "---")
+      if recovers == -1:
+        self.botstatus.set_field("Recovers", "---")
       else:
-        self.botstatus.set_field("Restarts", "%d" % restarts)
+        self.botstatus.set_field("Recovers", "%d" % recovers)
+      if len(words) >= 8:
+        self.botstatus.set_field("CodeVer", words[7])
+      else:
+        self.botstatus.set_field("CodeVer", "---")
 
     def monitor_arduino(self):
       timenow = time.monotonic()
@@ -439,18 +453,26 @@ class DriveStation(tk.Frame):
         self.arduinostatus.set_field("PWM", "%5.2f %5.2f %5.2f" % dd)
       else:
         self.arduinostatus.set_field("PWM", "---")
+      if "XXX0" in d and "XXX1" in d and "XXX2" in d:
+        dd = d["XXX0"], d["XXX1"], d["XXX2"]
+        self.arduinostatus.set_field("XXX", "%3d %3d %3d" % dd)
+      else:
+        self.arduinostatus.set_field("XXX", "---")
 
     def send_loop_cmd(self):
       ''' Sends loop command to bot if we have mqtt.  Send the
       loop command once every 0.5 seconds. '''
       if not self.mqtt: return
       timenow = time.monotonic()
-      if timenow - self.last_cmd_send_time < 0.50: return
+      if timenow - self.last_cmd_send_time < 0.50 and not self.arduino_reset_flag: return
       self.last_cmd_send_time = timenow 
       cmdstr, tme_to_go = self.gameclock.get_botcmd()
-      s = ("%s %d %7.2f" % (cmdstr, self.run_loop_cnt, tme_to_go))
+      auxcmd = "NoOp"
+      if self.arduino_reset_flag: auxcmd = "RestartArduino"
+      self.arduino_reset_flag = False
+      s = ("%s %d %7.2f %s" % (cmdstr, self.run_loop_cnt, tme_to_go, auxcmd))
       self.mqtt.publish("wbot/mode", s)
-      
+  
     def background_run(self):
         ''' Runs in the background, doing the main activity: sending
         joystick inputs to the pi, and keeping the ui up to date. '''
@@ -460,21 +482,33 @@ class DriveStation(tk.Frame):
             self.monitor_botstatus()
             self.monitor_arduino()
             joysticks_okay = True
+            btns_list = []
+            axes_list = []
+            pov_list = []
             for ij in range(self.config.number_of_joysticks):
                 btns = self.joysticks[ij].get_buttons()
-                xyz = self.joysticks[ij].get_axis()
-                ruv = self.joysticks[ij].get_ruv()
-                hats = self.joysticks[ij].get_hat()
+                axes = self.joysticks[ij].get_axes()
+                pov = self.joysticks[ij].get_pov()
                 haveconnection = self.joysticks[ij].is_connected()
                 if haveconnection: 
                     self.joystick_widgets[ij].set_mode('active')
                 else: 
                     self.joystick_widgets[ij].set_mode('invalid')
                     joysticks_okay = False
-                self.joystick_widgets[ij].set_axis(*xyz, axis=0)
-                self.joystick_widgets[ij].set_ruv(*ruv)
+                self.joystick_widgets[ij].set_axes(*axes)
                 self.joystick_widgets[ij].set_buttons(*btns)
-                self.joystick_widgets[ij].set_hats(*hats)
+                self.joystick_widgets[ij].set_pov(pov)
+                btns_list.append(btns)
+                axes_list.append(axes)
+                pov_list.append(pov)
+            
+            while len(btns_list) < 2:
+              btns = [False for _ in range(12)]
+              axes = [0.0 for _ in range(6)]
+              pov = (0, 0)
+              btns_list.append(btns)
+              axes_list.append(axes)
+              pov_list.append(pov)
 
             if joysticks_okay:
                 self.hwstatus.set_status("Joystick", dscolors.status_okay)
@@ -483,25 +517,25 @@ class DriveStation(tk.Frame):
             if self.mqtt:
                 self.send_loop_cmd()
                 # send out joystick values to robot here...
-                if self.last_btns != btns:
-                    self.last_btns = btns
+                for i in range(2):
+                  btns = btns_list[i]
+                  axes = axes_list[i]
+                  pov = pov_list[i]
+                  if btns != self.last_btns[i]:
+                    self.last_btns[i] = btns
                     s = ""
-                    for i in btns:
-                        if i: s += "T " 
+                    for ib in btns:
+                        if ib: s += "T " 
                         else: s += "F "
-                    self.mqtt.publish("wbot/joystick/buttons", s)
-                    #print("Publishing Buttons = %s" % s)
-                if not same_in_tolerance(xyz, self.last_xyz):
-                    self.last_xyz = xyz
-                    s = "%7.4f %7.4f %7.4f" % tuple(xyz)
-                    self.mqtt.publish("wbot/joystick/xyz", s)
-                    #print("Publishing xyz = %s" % s)
-                if not same_in_tolerance(ruv, self.last_ruv):
-                    self.last_ruv = ruv
-                    s = "%7.4f %7.4f %7.4f" % tuple(ruv)
-                    #Off due to broken input...
-                    #self.mqtt.publish("wbot/joystick/ruv", s)
-                    #print("Publishing ruv = %s " %s )
+                    self.mqtt.publish("wbot/joystick%d/buttons" % i, s)
+                  if not same_in_tolerance(axes, self.last_axes[i]):
+                    self.last_axes[i] = axes
+                    s = "%7.4f %7.4f %7.4f %7.4f %7.4f %7.4f" % tuple(axes)
+                    self.mqtt.publish("wbot/joystick%d/axes" % i, s)
+                  if pov != self.last_pov[i]:
+                    self.last_pov[i] = pov
+                    s = "%d %d" % pov
+                    self.mqtt.publish("wbot/joystick%d/pov" % i, s)
             self.bg_count += 1
             # if self.bg_count % 100 == 0: print("Background Loop: %d." % self.bg_count)
             if self.quitbackgroundtasks: 

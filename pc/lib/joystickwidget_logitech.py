@@ -75,18 +75,15 @@ class JoystickWidget(tk.Frame):
                             fill=dscolors.indicator_bg, width=linewidth)
         self._zdir = self._canvas.create_rectangle(x0+linewidth, y0+linewidth, 
                     x1-linewidth, y1-linewidth, fill=dscolors.indicator_fg, outline=dscolors.indicator_fg)
-        self._statusfont = self._bigfont = tkFont.Font(family="Lucida Grande", size=12)
+        self._statusfont = self._bigfont = tkFont.Font(family="Lucida Grande", size=10)
         x, y = textloc
-        self._status = self._canvas.create_text(x + xorg, y + yorg, text="Joystick",
+        self._status = self._canvas.create_text(x + xorg, y + yorg, text="Logitech Joystick",
                         state=tk.DISABLED, fill="black", anchor=tk.CENTER, font=self._statusfont)
-        self._joyaxis = (0.0, 0.0, 0.0)
-        self._joyruv = (0.0, 0.0, 0.0)
+        self._joyaxis = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
         self._joybtns = tuple([False for x in range(12)])
         self._lastaxis = None
-        self._lastruv = None
         self._lastbtns = None
         self._lastmode = ''
-
         self._showaxes()
         self._showbtns()
         self._showruv()
@@ -106,47 +103,23 @@ class JoystickWidget(tk.Frame):
         if mode == 'active':
             self._canvas.itemconfig(self._background, fill=dscolors.widget_bg, 
                     outline=dscolors.widget_bg)
-            self.set_statustext(text="Joystick", color="black")
+            self.set_statustext(text="Logitech Joystick", color="black")
         if mode == 'invalid':
             self._canvas.itemconfig(self._background, fill=dscolors.indicator_invalid_bg, 
                     outline=dscolors.indicator_invalid_bg)
-            self.set_statustext(text="Joystick Not Found", color="red")
+            self.set_statustext(text="Logitech Joystick Not Found", color="red")
 
-    def set_axis(self, *args, axis=0):
-        ''' Sets the axis values for x, y, z directions. 0-3 values can be given.
+    def set_axes(self, *args):
+        ''' Sets the axis values.  Up to six floats can be given. 
         Axis values range from -1.0 to 1.0 '''
-        #TODO: axis parameter does nothing as of now
-        if len(args) >= 3:
-            self._joyaxis = args[:3]
-        elif len(args) == 2:
-            x, y = args
-            z = self._joyaxis[2]
-            self._joyaxis = (x, y, z)
-        elif len(args) == 1:
-            x = args[0]
-            y, z = self._joyaxis[1], self._joyaxis[2]
-            self._joyaxis = (x, y, z)
+        if len(args) >= 6:
+            self._joyaxis = args[:6]
         else:
-            return
+            self._joyaxis = [0.0 for _ in range(6)]
+            for i, v in enumerate(args):
+                self._joyaxis[i] = v
         self._fixaxis()
         self._showaxes()
-
-    def set_ruv(self, *args):
-        ''' Set the RUV (orientation axis) for r, u, v angles.
-        0-3 arguments can be given. Values should be between -1.0 and 1.0. '''
-        if len(args) >= 3:
-            self._joyruv = args[:3]
-        elif len(args) == 2:
-            x, y = args
-            z = self._joyruv[2]
-            self._joyruv = (x, y, z)
-        elif len(args) == 1:
-            x = args[0]
-            y, z = self._joyruv[1], self._joyruv[2]
-            self._joyruv = (x, y, z)
-        else:
-            return
-        self._fixruv()
         self._showruv()
 
     def set_buttons(self, *buttons):
@@ -157,15 +130,12 @@ class JoystickWidget(tk.Frame):
         elif len(buttons) >= 12:
             self._joybtns = tuple(buttons[:12])
         else:
-            bnew = list(self._joybtns[:])
-            i = 0
-            for x in buttons:
-                bnew[i] = x
-                i += 1
-            self._joybtns = tuple(bnew)
+            self._joybtns = [False for _ in range(12)]
+            for i, b in enumerate(buttons):
+                self._joybtns[i] = b
         self._showbtns()
 
-    def set_hats(self, *args):
+    def set_pov(self, *args):
         ''' Not applicable to Logitech joystick '''
         pass
 
@@ -183,20 +153,12 @@ class JoystickWidget(tk.Frame):
             r.append(a)
         self._joyaxis = tuple(r)
 
-    def _fixruv(self):
-        ''' clamps the ruv values to -1.0 to 1.0. '''
-        r = []
-        for a in self._joyruv:
-            if a < -1.0: a = -1.0
-            if a > 1.0: a = 1.0
-            r.append(a)
-        self._joyruv = tuple(r)
-
     def _showaxes(self):
         ''' draws the position of the joystick on the diagram '''
         if self._joyaxis == self._lastaxis: return
         self._lastaxis = self._joyaxis
-        x, y, z = self._joyaxis
+        x, y, z, _, _, _ = self._joyaxis
+        x = -x  
         ix, iy = xorg - int(x * (barlen2-linewidth)), yorg - int(y * (barlen2-linewidth))
         x0, y0, x1, y1 = xorg, yorg + barwidth2 - linewidth, ix, yorg - barwidth2
         self._canvas.coords(self._xdir, x0, y0, x1, y1)
@@ -209,12 +171,11 @@ class JoystickWidget(tk.Frame):
         x0, y0 = xorg + xx + linewidth - 1, yorg + yy - linewidth + h
         x1, y1 = xorg + xx + w - linewidth, yorg + yy - linewidth + h - iz  
         self._canvas.coords(self._zdir, x0, y0, x1, y1)
+        self._showruv()
 
     def _showruv(self):
         ''' draw the angle of the twist on the diagram '''
-        if self._joyruv == self._lastruv: return
-        self._lastruv = self._joyruv
-        val = self._joyruv[0]
+        _, _, _, val, _, _ = self._joyaxis
         angle = int(val * 60.0)
         if angle > -3 and angle < 3:
             self._canvas.itemconfig(self._zaxis3, start=88, extent=2)

@@ -1,6 +1,11 @@
 # joystick_linux.py -- Interfaces with a Logitech joystick on Linux
 # hp Feb 2021
 
+#
+# !!!!!!!!!!!!!!!!!!!!!!!!!!
+# TODO: This code needs to be reworked to match the rawjoystick_win.py interface.
+#
+
 import ctypes
 
 from inputs import devices

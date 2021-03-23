@@ -15,6 +15,7 @@ joyGetNumDevs = ctypes.windll.winmm.joyGetNumDevs
 joyGetPos = ctypes.windll.winmm.joyGetPos
 joyGetPosEx = ctypes.windll.winmm.joyGetPosEx
 joyGetDevCaps = ctypes.windll.winmm.joyGetDevCapsW
+joyReleaseCapture = ctypes.windll.winmm.joyReleaseCapture
 
 # Define constants
 MAXPNAMELEN = 32
@@ -35,7 +36,7 @@ JOY_USEDEADZONE = 0x800
 JOY_RETURNALL = JOY_RETURNX | JOY_RETURNY | JOY_RETURNZ | JOY_RETURNR | JOY_RETURNU | JOY_RETURNV | JOY_RETURNPOV | JOY_RETURNBUTTONS
 
 # This is the mapping for my XBox 360 controller.
-button_names = ['a', 'b', 'x', 'y', 'tl', 'tr', 'back', 'start', 'thumbl', 'thumbr', '?1', '?2', '?3']
+button_names = ['a', 'b', 'x', 'y', 'tl', 'tr', 'back', 'start', 'thumbl', 'thumbr', '?1', '?2', '?3', '?4', '?5', '?6']
 povbtn_names = ['dpad_up', 'dpad_right', 'dpad_down', 'dpad_left']
 
 # Define some structures from WinMM that we will use in function calls.
@@ -100,6 +101,9 @@ if num_devs == 0:
 # Number of the joystick to open.
 joy_id = 0
 
+result = joyReleaseCapture(joy_id)
+print("Result from release = ", result)
+
 # Check if the joystick is plugged in.
 info = JOYINFO()
 p_info = ctypes.pointer(info)
@@ -152,6 +156,7 @@ info.dwSize = ctypes.sizeof(JOYINFOEX)
 info.dwFlags = JOY_RETURNBUTTONS | JOY_RETURNCENTERED | JOY_RETURNPOV | JOY_RETURNU | JOY_RETURNV | JOY_RETURNX | JOY_RETURNY | JOY_RETURNZ
 p_info = ctypes.pointer(info)
 
+n = 0
 # Fetch new joystick data until it returns non-0 (that is, it has been unplugged)
 while joyGetPosEx(joy_id, p_info) == 0:
     # Remap the values to float
@@ -177,10 +182,16 @@ while joyGetPosEx(joy_id, p_info) == 0:
     if info.dwPOV == 65535:
         povangle1 = None
         povangle2 = None
+        pov_x, pov_y = 0, 0
     else:
         angle = info.dwPOV / 9000.0
         povangle1 = int(floor(angle)) % 4
         povangle2 = int(ceil(angle)) % 4
+        a = int(angle * 2)
+        dirs = ((0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1))
+        pov_x, pov_y = dirs[a]
+    
+    spv = "%d %d" % (pov_x, pov_y)
 
     for i, btn in enumerate(povbtn_names):
         if i == povangle1 or i == povangle2:
@@ -198,8 +209,9 @@ while joyGetPosEx(joy_id, p_info) == 0:
     # Add spaces to erase data from the previous line
     erase = ' ' * max(0, prev_len - len(buttons_text))
 
+    n += 1
     # Display the x, y, trigger values.
-    print("\r(% .3f % .3f % .3f) (% .3f % .3f % .3f)%s%s" % (x, y, lt, rx, ry, rt, buttons_text, erase), end='')
+    print("\r %6ld (% .3f % .3f % .3f) (% .3f % .3f % .3f) %s %s%s" % (n, x, y, lt, rx, ry, rt, spv, buttons_text, erase), end='')
 
     #print info.dwXpos, info.dwYpos, info.dwZpos, info.dwRpos, info.dwUpos, info.dwVpos, info.dwButtons, info.dwButtonNumber, info.dwPOV, info.dwReserved1, info.dwReserved2
     time.sleep(0.01)

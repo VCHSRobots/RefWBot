@@ -25,7 +25,7 @@ class CommStatusWidget(tk.Frame):
         self._title = self._canvas.create_text(2, 7, anchor=tk.W, text="Comm Status",
                 font=self._font1, fill="black")
         self._fields = []
-        x, y = xmargin, 2*lineheight
+        x, y = xmargin, int(1.7*lineheight)
         for name in fields:
             fname = self._canvas.create_text(x, y, anchor=tk.W, text=name+":", font=self._font2,
                 fill=dscolors.label_black)

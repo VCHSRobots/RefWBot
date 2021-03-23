@@ -5,6 +5,13 @@
 		}
 	],
 	"settings": {
-		"files.eol": "\n"
+		"files.eol": "\n",
+		"cSpell.words": [
+			"Falses",
+			"ctypes",
+			"directx",
+			"pygames",
+			"winmm"
+		]
 	}
 }

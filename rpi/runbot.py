@@ -14,6 +14,7 @@ import hydromotor
 import utils
 import time
 
+version = "v1"  # A version indicator for the driver station
 dstimeout = 3.0  # number of seconds before kill due to no msg received from driver station
 
 class WaterBot():
@@ -30,13 +31,16 @@ class WaterBot():
       self.time_to_run = 0.0  # As given from the driver station
       self.msg_timeout_count = 0  # number of times shut down because no driver station messages
       self.msg_err_count = 0 # number of decoding errors on input messages
-      self.restart_count = 0 # number of times hardware was reset and restarted due to bus errors
+      self.recovered_count = 0 # number of times hardware recovered after bus error
       self.time_of_hw_fail_check = 0 # used to remember when restarts were tried.
       self.last_mode_cmd_time = time.monotonic() - 100.0
       self.mqtt.register_topic("wbot/mode", self.on_mode)
-      self.mqtt.register_topic("wbot/joystick/buttons")
-      self.mqtt.register_topic("wbot/joystick/xyz")
-      self.mqtt.register_topic("wbot/joystick/ruv")
+      self.mqtt.register_topic("wbot/joystick0/buttons")
+      self.mqtt.register_topic("wbot/joystick0/axes")
+      self.mqtt.register_topic("wbot/joystick0/pov")
+      self.mqtt.register_topic("wbot/joystick1/buttons")
+      self.mqtt.register_topic("wbot/joystick1/axes")
+      self.mqtt.register_topic("wbot/joystick1/pov")
       self.mqtt.register_topic("wbot/pingbot", self.on_ping)
       self.hw_okay = True
       self.bus_monitor = busmonitor.BusMonitor()
@@ -48,9 +52,12 @@ class WaterBot():
         self.hw_okay = False
       self.last_report_time_to_ds = time.monotonic() - 5.0
       self.last_report_time_to_term = time.monotonic() - 5.0
-      self.xyz = (0.0, 0.0, 0.0)
-      self.ruv = (0.0, 0.0, 0.0)
-      self.buttons = (False for _ in range(12))
+      self.axes0 = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+      self.pov0 = (0,0)
+      self.buttons0 = (False for _ in range(12))
+      self.axes1 = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+      self.pov1 = (0,0)
+      self.buttons1 = (False for _ in range(12))
       # ############################################################################     
       # Create actuators and sensors here
 
@@ -74,7 +81,11 @@ class WaterBot():
         self.msg_err_count += 1
         self.botmode = "STOP"
         self.mode_switch = True
-        return       
+        return 
+      if len(words) >= 4:
+        if words[3].lower() == "RestartArduino".lower():
+          print("******* Restarting Arduino")
+          self.arduino.reset_hardware()  
       try:
         self.ds_loop_count = int(words[1])
         self.time_to_run = float(words[2])
@@ -136,16 +147,22 @@ class WaterBot():
         print("Hardware reset successful!!!")
         self.hw_okay = True
         self.bus_monitor.reset() 
-        self.restart_count += 1
+        self.recovered_count += 1
 
   def get_control_inputs(self):
       ''' Gather all inputs '''
-      okay, x, y, z = self.mqtt.get_3_floats("wbot/joystick/xyz")
-      if okay: self.xyz = (x, y, z)
-      okay, r, u, v = self.mqtt.get_3_floats("wbot/joystick/ruv")
-      if okay: self.ruv = (r, u, v)
-      okay, btns = self.mqtt.get_12_bools("wbot/joystick/buttons")
-      if okay: self.buttons = tuple(btns)
+      okay, btns = self.mqtt.get_12_bools("wbot/joystick0/buttons")
+      if okay: self.buttons0 = tuple(btns)
+      okay, btns = self.mqtt.get_12_bools("wbot/joystick1/buttons")
+      if okay: self.buttons1 = tuple(btns)
+      okay, axes = self.mqtt.get_6_floats("wbot/joystick0/axes")
+      if okay: self.axes0 = axes
+      okay, axes = self.mqtt.get_6_floats("wbot/joystick1/axes")
+      if okay: self.axes1 = axes
+      okay, pov = self.mqtt.get_2_ints("wbot/joystick0/pov")
+      if okay: self.pov0 = pov
+      okay, pov = self.mqtt.get_2_ints("wbot/joystick1/pov")
+      if okay: self.pov1 = pov
 
   def report_status_to_term(self):
       ''' Reports the current status to the terminal once every 3 seconds. '''
@@ -160,19 +177,27 @@ class WaterBot():
         _, bat_m = self.arduino.get_battery_voltage(battype="M")
         _, bat_l = self.arduino.get_battery_voltage(battype="L")
       print("Hardware okay: %s   i2c errors = %d  restarts = %d" % (self.hw_okay, 
-        self.bus_monitor.get_total_error_count(), self.restart_count))
+        self.bus_monitor.get_total_error_count(), self.recovered_count))
       print("Main Battery: %6.1f volts,  Logic Battery: %6.1f" % (bat_m, bat_l) )
       print("Connected to MQTT: %s" % self.mqtt.is_connected())
       mqttcounts = self.mqtt.get_counts()
       print("MQTT messages received: %d " % mqttcounts["rx"])
       print("MQTT errors: %d" % mqttcounts["err"])
-      print("XYZ: %5.3f, %5.3f, %5.3f" % self.xyz)
-      print("RUV: %5.3f, %5.3f, %5.3f" % self.ruv)
+      print("Axes 0: %6.3f, %6.3f, %6.3f, %6.3f, %6.3f, %6.3f" % self.axes0)
+      print("Axes 1: %6.3f, %6.3f, %6.3f, %6.3f, %6.3f, %6.3f" % self.axes1)
       s = ""
-      for b in self.buttons: 
+      for b in self.buttons0: 
         if b: s += "T "
         else: s += "F "
-      print("Buttons: %s" % s)
+      print("Buttons0: %s" % s)
+      s = ""
+      for b in self.buttons1: 
+        if b: s += "T "
+        else: s += "F "
+      print("Buttons1: %s" % s)
+      x0, y0 = self.pov0
+      x1, y1 = self.pov1
+      print("POV0 = (%d, %d)   POV1 = (%d %d)" % (x0, y0, x1, y1))
       print("msgerr = %d, msgtmeouts = %d" % (self.msg_err_count, self.msg_timeout_count))
 
   def report_status_to_ds(self):
@@ -185,8 +210,8 @@ class WaterBot():
         _, bat_m = self.arduino.get_battery_voltage(battype="M")
         _, bat_l = self.arduino.get_battery_voltage(battype="L")
       i2c = self.bus_monitor.get_total_error_count()
-      s = "%s %d %s %6.1f %6.1f %d %d" % ("okay", self.ds_loop_count, 
-        self.hw_okay, bat_m, bat_l, i2c, self.restart_count)
+      s = "%s %d %s %6.1f %6.1f %d %d %s" % ("okay", self.ds_loop_count, 
+        self.hw_okay, bat_m, bat_l, i2c, self.recovered_count, version)
       self.mqtt.publish("wbot/status", s)
       if self.hw_okay:
         try:
@@ -259,7 +284,7 @@ class WaterBot():
       #initalize stuff here...
       print("**** Switching to TeleOp")
       self.hydrodrive.start()
-    x, y, z = self.xyz 
+    x, y, z, _, _, _ = self.axes0
     self.pca.set_servo(15, z)
     self.hydrodrive.move(x, y)
 

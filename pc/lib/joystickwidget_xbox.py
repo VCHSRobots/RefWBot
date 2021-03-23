@@ -29,7 +29,7 @@ btnsz = 8  # size of the buttons in px
 hatsz = 8
 # locations of buttons relative to orgin
 btnrectslocs=((75, -55), (83, -63), (67, -63), (75, -71), (-60, -95), (60, -95), 
-              (-35, -80), (35, -80), (0, -80), (-39, -50), (62, -20))
+              (-35, -80), (35, -80), (-39, -50), (62, -20),  (0, -95), (0, -80))
 
 class JoystickWidget(tk.Frame):
     def __init__(self, parent):
@@ -98,21 +98,20 @@ class JoystickWidget(tk.Frame):
                             fill=dscolors.indicator_bg, width=linewidth)
         self._zdir2 = self._canvas.create_rectangle(x0+linewidth, y0+linewidth, 
                     x1-linewidth, y1-linewidth, fill=dscolors.indicator_fg, outline=dscolors.indicator_fg)
-        self._statusfont = self._bigfont = tkFont.Font(family="Lucida Grande", size=12)
+        self._statusfont = self._bigfont = tkFont.Font(family="Lucida Grande", size=10)
         x, y = textloc
         self._status = self._canvas.create_text(x + xorg, y + yorg, text="GamePad",
                         state=tk.DISABLED, fill="black", anchor=tk.CENTER, font=self._statusfont)
-        self._joyaxis = (0.0, 0.0, 0.0)
+        self._joyaxis = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
         self._joybtns = tuple([False for x in range(12)])
-        self._joyhats = (0, 0)
+        self._joypov = (0, 0)
         self._lastaxis = None
         self._lastbtns = None
-        self._lasthats = None
+        self._lastpov = None
         self._lastmode = ''
-
         self._showaxes()
         self._showbtns()
-        self._showhats()
+        self._showpov()
   
     def get_size(self):
         ''' Returns the desired size for this widget. '''
@@ -129,34 +128,23 @@ class JoystickWidget(tk.Frame):
         if mode == 'active':
             self._canvas.itemconfig(self._background, fill=dscolors.widget_bg,
                 outline=dscolors.widget_bg)
-            self.set_statustext(text="Joystick", color="black")
+            self.set_statustext(text="XBox Gamepad", color="black")
         if mode == 'invalid':
             self._canvas.itemconfig(self._background, fill=dscolors.indicator_invalid_bg,
                 outline=dscolors.indicator_invalid_bg)
-            self.set_statustext(text="Joystick Not Found", color="red")
+            self.set_statustext(text="XBox Gamepad Not Found", color="red")
 
-    def set_axis(self, *args, axis=0):
-        ''' Sets the axis values for x, y, z directions. 0-3 values can be given.
+    def set_axes(self, *args):
+        ''' Sets the axis values.  Up to six floats can be given. 
         Axis values range from -1.0 to 1.0 '''
-        if len(args) >= 3:
-            x, y, z = -args[0], -args[1], args[2]
-            self._joyaxis = (x, y, z)
-        elif len(args) == 2:
-            x, y = -args[0], -args[1]
-            z = self._joyaxis[2]
-            self._joyaxis = (x, y, z)
-        elif len(args) == 1:
-            x = -args[0]
-            y, z = self._joyaxis[1], self._joyaxis[2]
-            self._joyaxis = (x, y, z)
+        if len(args) >= 6:
+            self._joyaxis = args[:6]
         else:
-            return
+            self._joyaxis = [0.0 for _ in range(6)]
+            for i, v in enumerate(args):
+                self._joyaxis[i] = v
         self._fixaxis()
-        self._showaxes(axis=axis)
-
-    def set_ruv(self, *args):
-        ''' Redirect to set_axis function '''
-        self.set_axis(*args, axis=1)
+        self._showaxes()
 
     def set_buttons(self, *buttons):
         ''' Sets the button states on the joystick display.
@@ -174,13 +162,11 @@ class JoystickWidget(tk.Frame):
             self._joybtns = tuple(bnew)
         self._showbtns()
 
-    def set_hats(self, *hats):
-        ''' Sets the hat states on the joystick display.
-        2 booleans and/or integers can be provided. '''
-        if len(hats) < 2:
-            return
-        self._joyhats = tuple(hats[:2])
-        self._showhats()
+    def set_pov(self, pov):
+        ''' Sets the pov hat states on the joystick display. A 2-tuple
+        in the form (x,y) is expected, where x and y can be -1, 0, or 1.'''
+        self._joypov = pov
+        self._showpov()
 
     def set_statustext(self, text, color="black"):
         ''' Sets the status text under the diagram on the joystick. Note that
@@ -196,65 +182,60 @@ class JoystickWidget(tk.Frame):
             r.append(a)
         self._joyaxis = tuple(r)
 
-    def _showaxes(self, axis=0):
+    def _showaxes(self):
         ''' draws the position of the joystick on the diagram '''
         if self._joyaxis == self._lastaxis: return
         self._lastaxis = self._joyaxis
-        if axis==0:
-            xorg_rel = a1xorg
-            yorg_rel = a1yorg
-            xdir = self._xdir1
-            ydir = self._ydir1
-            zdir = self._zdir1
-            current_zbar = zbar1
-        elif axis==1:
-            xorg_rel = a2xorg
-            yorg_rel = a2yorg
-            xdir = self._xdir2
-            ydir = self._ydir2
-            zdir = self._zdir2
-            current_zbar = zbar2
-        else:
-            xorg_rel = xorg
-            yorg_rel = yorg
-            xdir = self._xdir1
-            ydir = self._ydir1
-            zdir = self._zdir1
-            current_zbar = zbar1
-        x, y, z = self._joyaxis
-        ix, iy = xorg_rel - int(x * (barlen2-linewidth)), yorg_rel - int(y * (barlen2-linewidth))
-        x0, y0, x1, y1 = xorg_rel, yorg_rel + barwidth2 - linewidth, ix, yorg_rel - barwidth2
-        self._canvas.coords(xdir, x0, y0, x1, y1)
-        x0, y0, x1, y1 = xorg_rel + barwidth2 - linewidth, yorg_rel, xorg_rel - barwidth2, iy
-        self._canvas.coords(ydir, x0, y0, x1, y1)
-        #Set zbar
-        xx, yy, h, w = current_zbar
-        iz = int(z * h)
-        if iz < 1: iz = 1
-        if iz > h-linewidth: iz = h-linewidth
-        x0, y0 = xorg + xx + linewidth - 1, yorg + yy - linewidth + h
-        x1, y1 = xorg + xx + w - linewidth, yorg + yy - linewidth + h - iz  
-        self._canvas.coords(zdir, x0, y0, x1, y1)
+        for axis_num in range(2):
+            if axis_num == 0:
+                xorg_rel = a1xorg
+                yorg_rel = a1yorg
+                xdir = self._xdir1
+                ydir = self._ydir1
+                zdir = self._zdir1
+                current_zbar = zbar1
+                x, y, z, _, _, _ = self._joyaxis
+                x = -x
+            else:   # axis_num == 1:
+                xorg_rel = a2xorg
+                yorg_rel = a2yorg
+                xdir = self._xdir2
+                ydir = self._ydir2
+                zdir = self._zdir2
+                current_zbar = zbar2
+                _, _, _, x, y, z = self._joyaxis
+                x = -x
+            ix, iy = xorg_rel - int(x * (barlen2-linewidth)), yorg_rel - int(y * (barlen2-linewidth))
+            x0, y0, x1, y1 = xorg_rel, yorg_rel + barwidth2 - linewidth, ix, yorg_rel - barwidth2
+            self._canvas.coords(xdir, x0, y0, x1, y1)
+            x0, y0, x1, y1 = xorg_rel + barwidth2 - linewidth, yorg_rel, xorg_rel - barwidth2, iy
+            self._canvas.coords(ydir, x0, y0, x1, y1)
+            #Set zbar
+            xx, yy, h, w = current_zbar
+            iz = int(z * h)
+            if iz < 1: iz = 1
+            if iz > h-linewidth: iz = h-linewidth
+            x0, y0 = xorg + xx + linewidth - 1, yorg + yy - linewidth + h
+            x1, y1 = xorg + xx + w - linewidth, yorg + yy - linewidth + h - iz  
+            self._canvas.coords(zdir, x0, y0, x1, y1)
 
     def _showbtns(self):
         ''' draws the conditions of the buttons on the diagram '''
         if self._joybtns == self._lastbtns: return
         self._lastbtns = self._joybtns
-        icnt = 0
-        for r in self._btnrecs:
-            if self._joybtns[icnt]:
+        for ir, r in enumerate(self._btnrecs):
+            if self._joybtns[ir]:
                 self._canvas.itemconfig(r, fill=dscolors.indicator_fg)
             else:
                 self._canvas.itemconfig(r, fill=dscolors.indicator_bg)
-            icnt += 1
     
-    def _showhats(self):
-        ''' draws the conditions of the hats on the diagram '''
-        if self._joyhats == self._lasthats: return
-        self._lasthats = self._joyhats
+    def _showpov(self):
+        ''' draws the conditions of the pov hat on the diagram '''
+        if self._joypov == self._lastpov: return
+        self._lastpov = self._joypov
         for i in range(len(self._hatrecs)):
             for j in range(len(self._hatrecs[i])):
-                if i == self._joyhats[1]+1 and j == self._joyhats[0]+1:
+                if i == self._joypov[1]+1 and j == self._joypov[0]+1:
                     self._canvas.itemconfig(self._hatrecs[i][j], fill=dscolors.indicator_fg)
                 else:
                     self._canvas.itemconfig(self._hatrecs[i][j], fill=dscolors.indicator_bg)

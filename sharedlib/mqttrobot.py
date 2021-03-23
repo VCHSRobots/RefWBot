@@ -121,18 +121,33 @@ class MqttRobot():
 
     def get_3_floats(self, topic):
         ''' Decodes three floats from MQTT topic. Returns:
-        okay_flag, f1, f2, f3. '''
+        okay_flag, val, where val is a list of 3 floats.'''
         okay, s, _ = self.get_data(topic)
         if not okay:
-          return False, 0, 0, 0
+          return False, (0.0, 0.0, 0.0)
         slist = s.split() 
         if len(slist) != 3:
-          return False, 0, 0, 0
+          return False, (0.0, 0.0, 0.0)
         try:
           x, y, z = float(slist[0]), float(slist[1]), float(slist[2])
         except:
-          return False, 0, 0, 0
-        return True, x, y, z
+          return False, (0.0, 0.0, 0.0)
+        return True, (x, y, z)
+
+    def get_6_floats(self, topic):
+        ''' Decodes six floats from MQTT topic. Returns:
+        okay_flag, val, where val is a list of six floats.'''
+        okay, s, _ = self.get_data(topic)
+        if not okay:
+          return False, (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+        slist = s.split() 
+        if len(slist) != 6:
+          return False, (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+        try:
+          x, y, z, r, u, v = float(slist[0]), float(slist[1]), float(slist[2]), float(slist[3]), float(slist[4]), float(slist[5])
+        except ValueError:
+          return False, (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+        return True, (x, y, z, r, u, v)
 
     def get_12_bools(self, topic):
         ''' Decodes 12 booleans from MQTT topic. Returns:
@@ -148,5 +163,20 @@ class MqttRobot():
           if s == "T": btns.append(True)
           else: btns.append(False)
         return True, btns
+
+    def get_2_ints(self, topic):
+        ''' Decodes 2 integers from MQTT topic. Returns:
+        okay_flag, val, where vals is a list of 2 integers. '''
+        okay, s, _ = self.get_data(topic)
+        if not okay:
+          return False, (0, 0)
+        slist = s.split()
+        if len(slist) != 2:
+          return False, (0, 0)
+        try:
+          x, y = int(slist[0]), int(slist[1])
+        except ValueError:
+          return False, (0, 0)
+        return True, (x, y)
 
 

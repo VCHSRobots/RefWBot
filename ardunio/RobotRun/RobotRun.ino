@@ -71,6 +71,8 @@
 
 void (* resetFunc) (void) = 0;
 
+char version = 'f';
+
 int ardunio_ic2_addr = 0x8;  // Sets the address of this arduino for the RPi to access
 int bat_motor_input_pin = A0;
 int bat_logic_input_pin = A1;
@@ -211,7 +213,7 @@ void pi_restart() {
 volatile byte timesend[4];
 void sendPiData() {
   sendcnt++;
-  if (regaddr == REG_SIGV) {Wire.write('e'); return; }
+  if (regaddr == REG_SIGV) {Wire.write(version); return; }
   if (regaddr == REG_BAT_M) {
     int i = batvolts_motor * 10;
     Wire.write(i); 
@@ -276,10 +278,10 @@ void monitor_battery() {
     // Read the voltage once every second...
     batcount = 0;
     int bv = analogRead(bat_motor_input_pin);  // Requires about .1 ms to read.
-    batvolts_motor = bv * 16.0 / 1024.0;  // Where 15.92 = Full range in volts
+    batvolts_motor = bv * 14.5 / 1024.0;  // Where 15.92 = Full range in volts
     regs[REG_BAT_M] = bv;
     bv = analogRead(bat_logic_input_pin); // Requires about .1 ms to read.
-    batvolts_logic = bv * 16.0 / 1024.0;  // Where 15.92 = Full range in volts
+    batvolts_logic = bv * 14.5 / 1024.0;  // Where 15.92 = Full range in volts
     regs[REG_BAT_L] = bv;
   }
   if (batvolts_motor > 10.5 && batvolts_logic > 10.5) {
