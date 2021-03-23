@@ -323,8 +323,8 @@ class DriveStation(tk.Frame):
         s1 = d1.split()[0]
       except: 
         s0 = s1 = ""
-      if s0 != "okay" or s1 != "okay":
-        self.hwstatus.set_status("Code", dscolors.status_error)
+      if (s0 != "okay" and s0 != "code_err") or (s1 != "okay" and s1 != "code_err"):
+        self.hwstatus.set_status("Code", dscolors.status_error)    
         self.hwstatus.set_status("I2C Bus", dscolors.indicator_bg)
         self.hwstatus.set_status("Bat M", dscolors.indicator_bg)
         self.hwstatus.set_status("Bat L", dscolors.indicator_bg)
@@ -349,7 +349,10 @@ class DriveStation(tk.Frame):
       elif timenow - t0 > 4.0 or timenow - t1 > 3.0:
         self.hwstatus.set_status("Code", dscolors.status_warn)
       else:
-        self.hwstatus.set_status("Code", dscolors.status_okay)
+        if s0 == "code_err" or s1 == "code_err":
+          self.hwstatus.set_status("Code", dscolors.status_warn)
+        else:
+          self.hwstatus.set_status("Code", dscolors.status_okay)
       words = d1.split()
       if len(words) < 7:
         self.hwstatus.set_status("I2C Bus", dscolors.status_error)

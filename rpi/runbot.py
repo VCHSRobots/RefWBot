@@ -17,6 +17,12 @@ import time
 version = "v1"  # A version indicator for the driver station
 dstimeout = 3.0  # number of seconds before kill due to no msg received from driver station
 
+#  Attempt to load in the user code here.  The first module found with robot_*.py will
+# be used.
+
+
+
+
 class WaterBot():
   ''' WaterBot class is the main class for the program that controls the Water Bot. '''
 
@@ -58,6 +64,7 @@ class WaterBot():
       self.axes1 = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
       self.pov1 = (0,0)
       self.buttons1 = (False for _ in range(12))
+      self.user_code_error = False
       # ############################################################################     
       # Create actuators and sensors here
 
@@ -210,7 +217,9 @@ class WaterBot():
         _, bat_m = self.arduino.get_battery_voltage(battype="M")
         _, bat_l = self.arduino.get_battery_voltage(battype="L")
       i2c = self.bus_monitor.get_total_error_count()
-      s = "%s %d %s %6.1f %6.1f %d %d %s" % ("okay", self.ds_loop_count, 
+      s_status = "okay"
+      if self.user_code_error: s_status = "code_err"
+      s = "%s %d %s %6.1f %6.1f %d %d %s" % (s_status, self.ds_loop_count, 
         self.hw_okay, bat_m, bat_l, i2c, self.recovered_count, version)
       self.mqtt.publish("wbot/status", s)
       if self.hw_okay:
