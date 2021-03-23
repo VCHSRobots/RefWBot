@@ -8,10 +8,12 @@ class Base():
         pass
     def back_to_you(self):
         print("In back to you.")
+ourplace = os.path.dirname(os.path.abspath(__file__))
 
-
-flst = os.listdir()
+print("Script directory: %s" % ourplace)
+flst = os.listdir(ourplace)
 print("Files Found: %d" % len(flst))
+print("Files=", flst)
 module_file = ""
 for f in flst:
     if f.endswith(".py") and f.startswith("robot_"):

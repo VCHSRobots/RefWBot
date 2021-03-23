@@ -28,7 +28,8 @@ def get_user_module():
   ''' Attempts to find the robot_xxx.py file that the user wants to 
   used for dynamic loading.  If found, the module is loaded and returned,
   but the interal WaterBot class is NOT initiated.'''
-  flst = os.listdir()
+  ourplace = os.path.dirname(os.path.abspath(__file__))
+  flst = os.listdir(ourplace)
   module_file = ""
   for f in flst:
       if f.endswith(".py") and f.startswith("robot_"):
