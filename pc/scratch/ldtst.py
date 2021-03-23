@@ -3,6 +3,13 @@
 import os
 import sys
 
+class Base():
+    def __init__(self):
+        pass
+    def back_to_you(self):
+        print("In back to you.")
+
+
 flst = os.listdir()
 print("Files Found: %d" % len(flst))
 module_file = ""
@@ -16,6 +23,10 @@ if module_file == "":
 module_name = module_file[:-3]
 
 print("Using File: %s" % module_name)
-user_code = __import__(module_name)
-user_code.HiThere()
+user_module = __import__(module_name)
+user_class = getattr(user_module, "WaterBot")
+base = Base()
+user = user_class(base)
+user.tryfunc()
+
 

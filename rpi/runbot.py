@@ -23,7 +23,7 @@ dstimeout = 3.0  # number of seconds before kill due to no msg received from dri
 
 
 
-class WaterBot():
+class WaterBotBase():
   ''' WaterBot class is the main class for the program that controls the Water Bot. '''
 
   def __init__(self):
@@ -298,6 +298,6 @@ class WaterBot():
     self.hydrodrive.move(x, y)
 
 if __name__ == "__main__":
-    wb = WaterBot()
+    wb = WaterBotBase()
     wb.run()
 

@@ -3,3 +3,4 @@ dsconfig.txt
 rpi/runflex.py
 rpi/runhydro.py
 rpi/rungold.py
+robot_*.py
