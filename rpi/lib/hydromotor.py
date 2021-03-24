@@ -85,10 +85,11 @@ class HydroDrive():
       self.motor_right.set_speed(0.0)
 
     def shutdown(self):
+      ''' Kill the motors...'''
       self.motor_left.shutdown()
       self.motor_right.shutdown()
 
-    def move(self, x, y):
+    def move(self, x, y, twist=0):
       x, y = utils.clamp(x, -1.0, 1.0), utils.clamp(y, -1.0, 1.0)
       left = 0.5 * (x + y) 
       right = 0.5 * (x - y)

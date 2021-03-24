@@ -29,7 +29,7 @@ while True:
     r = wregs[ipath]
     wdat[ipath] = d = random.randint(0, 255)
     arduino.writereg(r, d)
-    okay, x = arduino.get_battery_voltage()
+    okay, x = arduino.get_battery_voltage(battype="L")
     if not okay or x < 9 or x > 14.5:
       print("Battery Voltage = %6.3f" % x)
       data_errcnt += 1
