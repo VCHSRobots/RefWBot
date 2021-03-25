@@ -90,9 +90,13 @@ class HydroDrive():
       self.motor_right.shutdown()
 
     def move(self, x, y, twist=0):
+      ''' Attemps to move in the direction given by x, y. '''
       x, y = utils.clamp(x, -1.0, 1.0), utils.clamp(y, -1.0, 1.0)
-      left = 0.5 * (x + y) 
-      right = 0.5 * (x - y)
+      twist = utils.clamp(twist, -1.0, 0.0)
+      left = (y + x) 
+      right = (y - x)
+      left = utils.clamp(left, -1.0, 1.0)
+      right = utils.clamp(right, -1.0, 1.0)
       self.motor_left.set_speed(left)
       self.motor_right.set_speed(right)
       
