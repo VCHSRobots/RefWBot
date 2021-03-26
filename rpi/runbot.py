@@ -63,6 +63,7 @@ class WaterBotBase():
       self.msg_err_count = 0 # number of decoding errors on input messages
       self.recovered_count = 0 # number of times hardware recovered after bus error
       self.time_of_hw_fail_check = 0 # used to remember when restarts were tried.
+      self.report_callback = None
       self.last_mode_cmd_time = time.monotonic() - 100.0
       self.mqtt.register_topic("wbot/mode", self.on_mode)
       self.mqtt.register_topic("wbot/joystick0/buttons")
@@ -245,6 +246,7 @@ class WaterBotBase():
       else:
         print("***  User Module Not Loaded!!")
       print("msgerr = %d, msgtmeouts = %d" % (self.msg_err_count, self.msg_timeout_count))
+      if self.report_callback: self.report_callback()
 
   def report_status_to_ds(self):
       ''' Reports the current status to the driver station, once every 1 second. '''
@@ -289,6 +291,10 @@ class WaterBotBase():
       self.run_auto(self.run_loop_count, self.time_to_run)
     if self.botmode == "TELEOP":
       self.run_teleop(self.run_loop_count, self.time_to_run)
+
+  def set_report_callback(self, cb):
+    ''' Sets the function to call when reports are made to the terminal.'''
+    self.report_callback = cb 
 
   # -------------------------------------------------------------------
   # Functions to execute according to robot mode.
