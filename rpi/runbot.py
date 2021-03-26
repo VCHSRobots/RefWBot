@@ -84,10 +84,10 @@ class WaterBotBase():
       self.last_report_time_to_term = time.monotonic() - 5.0
       self.axes0 = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
       self.pov0 = (0,0)
-      self.buttons0 = (False for _ in range(12))
+      self.buttons0 = list((False for _ in range(12)))
       self.axes1 = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
       self.pov1 = (0,0)
-      self.buttons1 = (False for _ in range(12))
+      self.buttons1 = list((False for _ in range(12)))
       self.user_class = None
       self.user = None
       if self.user_module is not None:
@@ -194,9 +194,9 @@ class WaterBotBase():
   def get_control_inputs(self):
       ''' Gather all inputs '''
       okay, btns = self.mqtt.get_12_bools("wbot/joystick0/buttons")
-      if okay: self.buttons0 = tuple(btns)
+      if okay: self.buttons0 = list(btns)
       okay, btns = self.mqtt.get_12_bools("wbot/joystick1/buttons")
-      if okay: self.buttons1 = tuple(btns)
+      if okay: self.buttons1 = list(btns)
       okay, axes = self.mqtt.get_6_floats("wbot/joystick0/axes")
       if okay: self.axes0 = axes
       okay, axes = self.mqtt.get_6_floats("wbot/joystick1/axes")
