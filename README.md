@@ -16,6 +16,7 @@ shown below is a schematic of the IO board that this control system uses.
 
 Note that we have PCBs for the IO board, if you are interested.  (Also shown below.)
 
+
 ### Theory of Operation
 The PC runs a python based program called the "driverstation".  This program
 gather inputs from a joystick, gamepad, or both, and transmits these inputs to 
